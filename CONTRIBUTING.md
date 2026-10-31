@@ -1,22 +1,108 @@
 # Contributing to TSAR
 
+## Language and Style
+- **English only.** No Arabic, no emojis, no decorative text.
+- **Comments**: only when explaining non-obvious security reasoning.
+- **Tables** for enumerable rules; prose for rationale.
+- **Consistent heading levels**; no skipped levels.
+
+## Repository Structure
+```
+system/         — core policy
+rules/          — 36 domains
+skills/         — runnable scanners
+tools/          — CLI, orchestrator, LSP, web, report
+integrations/   — CI/CD templates
+prompts/        — 15 agents
+docs/           — guides, compliance, architecture
+examples/       — secure and anti-pattern code
+tests/          — pytest suite
+policies/       — OPA/Cedar
+scripts/        — automation
+```
+
 ## Adding a Rule
-1. Place the rule in the correct `rules/` subdirectory.
-2. Reference it in `manifest.yaml` under the appropriate group.
-3. Add required sections to `scripts/lint_rules.py` (REQUIRED_SECTIONS) if it is a core file.
-4. Run `python scripts/lint_rules.py` locally; it must pass.
-5. Open a PR; CI must pass before merge.
 
-## Adding a Prompt File
-1. Create `prompts/<agent>.md` following the shape of existing files.
-2. Reference the manifest URL and CORE_DIRECTIVE.md.
-3. Add the agent name to README.md supported list.
+1. Choose the correct domain under `rules/`.
+2. Create `rules/<domain>/<name>.md` with:
+   - Title
+   - Risk description (one paragraph)
+   - `## Controls` (bullet list of must-dos)
+   - `## Forbidden` (bullet list of must-nots)
+   - `## Testing` (how to verify)
+3. Reference the file in `manifest.yaml` under `active_files`.
+4. Add a test in `tests/test_<domain>_rules.py`.
+5. Run `python scripts/lint_rules.py`.
+6. Run `pytest tests/`.
+7. Open a PR with the `rule-addition` label.
 
-## Style
-- English only.
-- Comments: only when they explain non-obvious security reasoning.
-- No Arabic, no emojis, no decorative text.
-- Tables for enumerable rules; prose for rationale.
+## Adding a Skill
 
-## Security Issues
-Report vulnerabilities privately per SECURITY.md. Do not open public issues for exploitable findings.
+1. Create `skills/<name>/SKILL.md` documenting purpose, invocation, detections, actions.
+2. Implement the script (`<name>.py` or equivalent).
+3. Add a test in `tests/test_skills.py`.
+4. Reference in `docs/`.
+5. Open a PR.
+
+## Adding an Agent Prompt
+
+1. Create `prompts/<agent>.md` following existing patterns.
+2. Reference the manifest URL and `CORE_DIRECTIVE.md`.
+3. Add to `docs/agent-compatibility-matrix.md`.
+4. Add to `tools/tsar-cli/tsar.py` in `--agent` choices.
+5. Update `README.md`.
+6. Open a PR.
+
+## Adding a Compliance Mapping
+
+1. Create `docs/compliance/<framework>.md`.
+2. Reference only existing files in `rules/`.
+3. Add to `docs/compliance/README.md`.
+4. Add to `tests/test_compliance_docs.py` FRAMEWORKS list.
+5. Run `pytest tests/test_compliance_docs.py`.
+6. Open a PR.
+
+## Adding an Integration
+
+1. Create `integrations/<platform>/<file>`.
+2. Document in `docs/ci-cd.md`.
+3. Test in a sample repository before merging.
+4. Add a note about fail-closed behavior.
+
+## Code Contributions
+
+- All Python scripts require tests.
+- All tests must pass in CI.
+- No new dependencies without discussion.
+- Follow existing patterns for style and structure.
+
+## Commit Messages
+
+Follow Conventional Commits:
+```
+feat(scope): description
+fix(scope): description
+docs(scope): description
+chore(scope): description
+test(scope): description
+```
+
+## Review Process
+
+- Rule changes require one maintainer review.
+- Core policy changes require two.
+- Security-sensitive changes require a security reviewer.
+- All PRs must pass CI.
+
+## Testing Requirements
+
+Every PR must:
+- Pass `pytest tests/`.
+- Pass `python scripts/lint_rules.py`.
+- Pass the orchestrator (`python tools/tsar-orchestrator/orchestrator.py .`).
+- Not introduce secrets (checked by secret-scanner).
+- Not introduce HIGH findings (checked by secure-review).
+
+## Reporting Security Issues
+
+See `SECURITY.md`. Do not open public issues for exploitable findings.
