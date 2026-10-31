@@ -39,3 +39,13 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    # Match the Terraform private_subnet_cidrs defaults; update these CIDRs
+    # together with variables.tf when the example VPC layout changes.
+    - to:
+        - ipBlock:
+            cidr: 10.40.1.0/24
+        - ipBlock:
+            cidr: 10.40.2.0/24
+      ports:
+        - protocol: TCP
+          port: 5432
