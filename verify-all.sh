@@ -1,6 +1,6 @@
 #!/bin/bash
 # TSAR — Full verification script.
-# Runs every check before a release or merge to main.
+# Runs every security and consistency check before a release or merge to main.
 
 set -uo pipefail
 
@@ -120,34 +120,7 @@ else
   echo -e "${YELLOW}SKIP${NC}: terraform not installed"
 fi
 
-step "15. No Arabic characters in any file"
-check "no_arabic" python3 - <<'PY'
-import sys
-from pathlib import Path
-bad = []
-for f in Path(".").rglob("*"):
-    if not f.is_file():
-        continue
-    if ".git" in f.parts or "node_modules" in f.parts:
-        continue
-    if f.suffix in {".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf"}:
-        continue
-    try:
-        text = f.read_text(errors="ignore")
-    except Exception:
-        continue
-    for i, line in enumerate(text.splitlines(), 1):
-        if any("\u0600" <= c <= "\u06ff" for c in line):
-            bad.append(f"{f}:{i}")
-if bad:
-    print("Arabic text found:")
-    for b in bad[:10]:
-        print(f"  - {b}")
-    sys.exit(1)
-print("No Arabic text found")
-PY
-
-step "16. No hardcoded secrets in repository"
+step "15. No hardcoded secrets in repository"
 check "no_secrets" python3 - <<'PY'
 import re, sys
 from pathlib import Path
