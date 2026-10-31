@@ -9,6 +9,10 @@ npm install
 npm run build
 ```
 
+The release-gate workflow builds this package on pull requests that change the
+LSP, policy, or full-verification inputs. The generated `out/` directory is
+a build artifact and is not required to be committed.
+
 ## VS Code Integration
 Create `.vscode/settings.json` in your project:
 
