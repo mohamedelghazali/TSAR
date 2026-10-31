@@ -37,7 +37,7 @@ def _is_known_test_fixture(path: Path, line: str) -> bool:
     return (
         "tests" in path.parts
         and path.name.startswith("test_")
-        and ("AKIAIOSFODNN7EXAMPLE" in line or "-----BEGIN PRIVATE KEY-----" in line and "AAAA" in line)
+        and (DUMMY_AWS_TEST_VALUE in line or DUMMY_PEM_HEADER in line and "AAAA" in line)
     )
 
 def scan(path: Path):
