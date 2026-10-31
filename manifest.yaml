@@ -37,6 +37,8 @@ active_files:
     - "rules/owasp-llm/llm08-hidden-context.md"
     - "rules/agentic-ai/tool-scoping.md"
     - "rules/agentic-ai/memory-integrity.md"
+    - "rules/agentic-ai/multi-agent-privilege.md"
+    - "rules/agentic-ai/rag-security.md"
     - "rules/ai-models/training-pipeline.md"
     - "rules/ai-models/inference-security.md"
     - "rules/ai-models/model-supply-chain.md"
@@ -70,3 +72,4 @@ active_files:
   data:
     - "rules/data/pii-handling.md"
     - "rules/data/logging-redaction.md"
+    - "rules/data/retention.md"
