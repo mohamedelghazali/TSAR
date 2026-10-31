@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 SECURE = ROOT / "examples" / "secure"
 
 LANGUAGES = ["python", "node", "go", "rust", "java", "kotlin", "swift"]
