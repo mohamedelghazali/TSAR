@@ -79,3 +79,32 @@ def test_standards_cache_is_not_gitignored():
     gitignore = SCRIPT.parents[1] / ".gitignore"
     lines = [line.strip() for line in gitignore.read_text(encoding="utf-8").splitlines()]
     assert ".tsar-cache/" not in lines
+
+
+def test_cache_promotion_failure_restores_previous_cache(tmp_path, monkeypatch):
+    module = load_sync_module()
+    cache = tmp_path / ".tsar-cache"
+    cache.mkdir()
+    marker = cache / "one.sha256"
+    marker.write_text("previous digest", encoding="ascii")
+    operator_note = cache / "operator-note.txt"
+    operator_note.write_text("preserve", encoding="utf-8")
+    monkeypatch.setattr(module, "CACHE_DIR", cache)
+    monkeypatch.setattr(module, "UPSTREAM", {"one": "url-1"})
+    monkeypatch.setattr(module, "fetch", lambda _url: b"new source")
+
+    real_replace = module.os.replace
+
+    def fail_promotion(source, destination):
+        source_path = Path(source)
+        destination_path = Path(destination)
+        if source_path.name.startswith(".tsar-cache.stage.") and destination_path == cache:
+            raise OSError("simulated cache promotion failure")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(module.os, "replace", fail_promotion)
+    assert module.main() == 1
+    assert marker.read_text(encoding="ascii") == "previous digest"
+    assert operator_note.read_text(encoding="utf-8") == "preserve"
+    assert not list(tmp_path.glob(".tsar-cache.stage.*"))
+    assert not list(tmp_path.glob(".tsar-cache.backup.*"))
