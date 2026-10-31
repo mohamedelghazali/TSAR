@@ -38,3 +38,9 @@ def test_checkout_credentials_are_disabled_exactly_once_per_checkout():
         checkouts = text.count("uses: actions/checkout@")
         disabled = text.count("persist-credentials: false")
         assert disabled == checkouts, workflow.name
+
+
+def test_pr_enforcement_scans_secure_examples_not_policy_documents():
+    workflow = (WORKFLOWS / "enforce-on-pr.yml").read_text(encoding="utf-8")
+    assert "review.py examples/secure" in workflow
+    assert "review.py ." not in workflow
