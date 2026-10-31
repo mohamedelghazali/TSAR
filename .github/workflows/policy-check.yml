@@ -18,9 +18,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Install OPA
         run: |
-          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64_static
-          chmod +x opa
-          sudo mv opa /usr/local/bin/opa
+          set -euo pipefail
+          OPA_VERSION="v1.21.4"
+          OPA_BINARY="opa_linux_amd64_static"
+          OPA_URL="https://github.com/open-policy-agent/opa/releases/download/$OPA_VERSION"
+          curl -fsSLo "$OPA_BINARY" "$OPA_URL/$OPA_BINARY"
+          curl -fsSLo "$OPA_BINARY.sha256" "$OPA_URL/$OPA_BINARY.sha256"
+          sha256sum -c "$OPA_BINARY.sha256"
+          chmod 0755 "$OPA_BINARY"
+          sudo install -m 0755 "$OPA_BINARY" /usr/local/bin/opa
       - name: Check policies compile
         run: opa check policies/
       - name: Run policy tests
