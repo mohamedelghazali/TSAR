@@ -46,10 +46,23 @@ runs:
 
     - name: Fetch TSAR
       shell: bash
+      env:
+        TSAR_REF: ${{ inputs.tsar_ref }}
       run: |
         set -euo pipefail
-        git clone --depth 1 --branch "${{ inputs.tsar_ref }}" \
-          https://github.com/mohamedelghazali/TSAR.git "$RUNNER_TEMP/tsar"
+        if [[ -z "$TSAR_REF" ]]; then
+          echo "::error::tsar_ref must not be empty"
+          exit 1
+        fi
+        if [[ ! "$TSAR_REF" =~ ^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$ ]] && ! git check-ref-format "refs/heads/$TSAR_REF" >/dev/null 2>&1; then
+          echo "::error::Invalid tsar_ref; use a valid branch, tag-like ref, or full commit SHA"
+          exit 1
+        fi
+        mkdir -p "$RUNNER_TEMP/tsar"
+        git -C "$RUNNER_TEMP/tsar" init
+        git -C "$RUNNER_TEMP/tsar" remote add origin https://github.com/mohamedelghazali/TSAR.git
+        git -C "$RUNNER_TEMP/tsar" fetch --depth 1 origin "$TSAR_REF"
+        git -C "$RUNNER_TEMP/tsar" checkout --detach FETCH_HEAD
 
     - name: Install dependencies
       shell: bash
