@@ -1,0 +1,41 @@
+name: One-time main branch synchronization
+
+on:
+  push:
+    branches:
+      - release/stable-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  merge-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: release/stable-hardening
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Merge current main into release branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "release/stable-hardening already contains main"
+            exit 0
+          fi
+          if ! git merge --no-edit origin/main; then
+            echo "Merge conflicts require deliberate resolution:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+          git push origin HEAD:refs/heads/release/stable-hardening
