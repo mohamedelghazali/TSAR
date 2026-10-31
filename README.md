@@ -78,7 +78,7 @@ OPA/LSP/Terraform builds.
 
 ## License
 
-See [LICENSE](LICENSE).
+TSAR uses a custom source-available license. Defined non-commercial uses are permitted; commercial use requires prior written authorization and a separate commercial license. This is not an OSI-approved Open Source license. See [LICENSE](LICENSE) for the full terms and the treatment of previously distributed MIT versions.
 
 ## Security
 
