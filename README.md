@@ -1,34 +1,83 @@
 # TSAR — Security Governance Layer for AI-Generated Code
 
-TSAR is an enforceable security policy repository injected into AI coding agents. It provides mandatory rules, platform baselines, cryptographic standards, and agentic-AI controls, with automatic synchronization via manifest versioning.
+TSAR is an enforceable security policy repository injected into AI coding agents.
+It provides mandatory rules, platform baselines, cryptographic standards, and
+agentic-AI controls, with automatic synchronization via manifest versioning.
 
-## Supported Agents
-Claude, Claude Code, GPT, DeepSeek-Coder, Qwen-Coder, Gemini, Llama, Cursor, GitHub Copilot, Manus, Windsurf, SuperNinja, Replit Agent, Devin, Kimi.
+## Coverage
+
+- **36 rule domains** across application, infrastructure, cloud, data, cryptography, networking, compliance, and emerging technology.
+- **15 AI agents** supported with dedicated prompts.
+- **9 programming languages** with secure reference implementations.
+- **5 compliance frameworks** mapped (SOC 2, ISO 27001, PCI DSS, HIPAA, GDPR).
+- **6 tools**: CLI, orchestrator, report, LSP, dashboard, and CI integrations.
 
 ## Quick Start
-1. Copy the relevant file from `prompts/` into your agent configuration.
-2. The agent fetches `manifest.yaml` at session start.
-3. Unsafe patterns are refused; secure alternatives are offered.
+
+```bash
+git clone https://github.com/mohamedelghazali/TSAR.git
+cd TSAR
+
+# Bootstrap into your project
+./tools/tsar-cli/tsar.py init /path/to/project --agent cursor
+
+# Or run all checks on any project
+./tools/tsar-cli/tsar.py scan /path/to/project
+./tools/tsar-orchestrator/orchestrator.py /path/to/project
+```
+
+## Supported Agents
+
+Claude, Claude Code, GPT, DeepSeek-Coder, Qwen-Coder, Gemini, Llama, Cursor,
+GitHub Copilot, Manus, Windsurf, SuperNinja, Replit Agent, Devin, Kimi.
 
 ## Structure
-- `system/` — core directive, prohibitions, enforcement levels, lifecycle.
-- `rules/crypto/` — algorithms, key management, AEAD, PQC, constant-time.
-- `rules/owasp-llm/` — LLM Top 10 controls.
-- `rules/agentic-ai/` — tool scoping and memory integrity.
-- `rules/platform/` — web, iOS, Android, firmware, distributed, edge.
-- `rules/hardware/` — TPM, HSM, Secure Enclave, secure boot, side channels.
-- `rules/data/` — PII and logging redaction.
-- `skills/` — runnable scanners, reviewers, threat modeler, crypto inventory.
-- `prompts/` — per-agent instruction files (15 agents).
-- `.github/workflows/` — auto-update, validation, PR enforcement.
 
-## Usage in a Project
-Place the appropriate file from `prompts/` in your project root:
-- Claude Code: `CLAUDE.md`
-- Cursor: `.cursorrules`
-- GitHub Copilot: `.github/copilot-instructions.md`
-- Windsurf: `.windsurfrules`
-- Others: prepend the prompt file to the agent's system instruction.
+| Directory | Purpose |
+|---|---|
+| `system/` | Core directive, prohibitions, enforcement levels |
+| `rules/` | 36 domains of security rules |
+| `skills/` | Runnable scanners and helpers |
+| `tools/` | CLI, orchestrator, report, LSP, dashboard |
+| `integrations/` | CI/CD templates for 4 platforms |
+| `prompts/` | Agent-specific instruction files |
+| `examples/` | Secure and anti-pattern code |
+| `docs/` | Guides, compliance mappings, architecture |
+| `policies/` | OPA/Cedar policies |
+| `tests/` | Full pytest suite |
+
+## Verification
+
+```bash
+./verify-all.sh
+```
+
+This runs every check: lint, scanners, tests, compliance references, Arabic
+character check, secret check, and optional LSP/Terraform/OPA builds.
+
+## Design Principles
+
+1. **Fail closed** — refuse Tier-1 work when rules cannot be loaded.
+2. **Structural over semantic** — prompts separated by role.
+3. **Defense in depth** — no single point of failure.
+4. **Time-bound exceptions** — every suppression has an expiry.
+5. **Evidence-driven** — every control produces audit evidence.
+6. **Portable** — no vendor lock-in.
+7. **Testable** — every rule has a test.
+
+## Documentation
+
+- [Getting Started](docs/getting-started.md)
+- [Architecture](docs/architecture.md)
+- [Agent Integration](docs/agent-integration.md)
+- [Compliance Mappings](docs/compliance/README.md)
+- [Roadmap](ROADMAP.md)
+- [Final Review](docs/final-review.md)
 
 ## License
-See LICENSE.
+
+See [LICENSE](LICENSE).
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
