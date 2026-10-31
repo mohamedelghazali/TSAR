@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 import urllib.request
+import uuid
 from pathlib import Path
 
 UPSTREAM = {
@@ -66,7 +67,7 @@ def commit_cache_atomically(digests: dict[str, str]) -> None:
         raise RuntimeError(f"cache path is not a directory: {CACHE_DIR}")
 
     stage = Path(tempfile.mkdtemp(prefix=f"{CACHE_DIR.name}.stage.", dir=parent))
-    backup = parent / f"{CACHE_DIR.name}.backup.{os.getpid()}.{next(tempfile._get_candidate_names())}"
+    backup = parent / f"{CACHE_DIR.name}.backup.{os.getpid()}.{uuid.uuid4().hex}"
     old_moved = False
     try:
         if CACHE_DIR.is_dir():
