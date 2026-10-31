@@ -1,17 +1,17 @@
 resource "aws_security_group" "app" {
-  name        = "tsar-app-\${var.environment}"
+  name        = "tsar-app-${var.environment}"
   description = "Application workload security group"
   vpc_id      = aws_vpc.main.id
 
-  tags = { Name = "tsar-app-\${var.environment}" }
+  tags = { Name = "tsar-app-${var.environment}" }
 }
 
 resource "aws_security_group" "rds" {
-  name        = "tsar-rds-\${var.environment}"
+  name        = "tsar-rds-${var.environment}"
   description = "RDS access from application workloads only"
   vpc_id      = aws_vpc.main.id
 
-  tags = { Name = "tsar-rds-\${var.environment}" }
+  tags = { Name = "tsar-rds-${var.environment}" }
 }
 
 # Separate rule resources avoid a dependency cycle between the two security groups.
