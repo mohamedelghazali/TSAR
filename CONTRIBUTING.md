@@ -9,7 +9,7 @@
 ## Repository Structure
 ```
 system/         — core policy
-rules/          — 36 domains
+rules/          — 37 domains
 skills/         — runnable scanners
 tools/          — CLI, orchestrator, LSP, web, report
 integrations/   — CI/CD templates
