@@ -80,3 +80,4 @@ def test_infra_workflow_generates_multi_platform_lockfile():
     assert "-platform=darwin_arm64" in text
     assert "-lockfile=readonly" in text
     assert "terraform-provider-lockfile" in text
+    assert "include-hidden-files: true" in text
