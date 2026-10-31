@@ -15,6 +15,11 @@ CWE_MAP = {
     "weak_crypto": "CWE-327",
     "weak_random": "CWE-338",
     "aws_key": "CWE-798",
+    "anthropic_key": "CWE-798",
+    "google_api": "CWE-798",
+    "stripe_key": "CWE-798",
+    "db_url": "CWE-798",
+    "jwt": "CWE-798",
     "openai_key": "CWE-798",
     "github_token": "CWE-798",
     "private_key": "CWE-798",
@@ -51,7 +56,7 @@ def emit(findings, out_path: Path):
         "runs": [{
             "tool": {"driver": {
                 "name": "TSAR",
-                "version": "1.0.0",
+                "version": "1.1.1",
                 "rules": list(rules.values()),
             }},
             "results": results,
