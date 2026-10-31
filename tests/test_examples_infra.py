@@ -70,3 +70,13 @@ def test_infra_workflow_validates_external_secret_with_pinned_schema():
     assert "3eb90d47aba8d61919d4419dd38301536e32a94b" in text
     assert "{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" in text
     assert "-ignore-missing-schemas" not in text
+
+
+def test_infra_workflow_generates_multi_platform_lockfile():
+    text = (ROOT / ".github" / "workflows" / "infra-validation.yml").read_text()
+    assert "terraform providers lock" in text
+    assert "-platform=linux_amd64" in text
+    assert "-platform=windows_amd64" in text
+    assert "-platform=darwin_arm64" in text
+    assert "-lockfile=readonly" in text
+    assert "terraform-provider-lockfile" in text
