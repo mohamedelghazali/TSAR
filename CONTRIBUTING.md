@@ -99,7 +99,10 @@ test(scope): description
 Every PR must:
 - Pass `pytest tests/`.
 - Pass `python scripts/lint_rules.py`.
-- Pass the orchestrator (`python tools/tsar-orchestrator/orchestrator.py examples/secure`).
+- Pass the orchestrator:
+  ```bash
+  python tools/tsar-orchestrator/orchestrator.py . --format json
+  ```
 - Not introduce secrets (checked by secret-scanner).
 - Not introduce HIGH findings (checked by secure-review).
 
