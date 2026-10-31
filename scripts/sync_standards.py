@@ -42,7 +42,7 @@ def recover_interrupted_cache() -> None:
         return
     backups = sorted(
         CACHE_DIR.parent.glob(f"{CACHE_DIR.name}.backup.*"),
-        key=lambda path: path.name,
+        key=lambda path: path.stat().st_mtime_ns,
         reverse=True,
     )
     if backups:
