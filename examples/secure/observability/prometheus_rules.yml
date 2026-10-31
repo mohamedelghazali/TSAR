@@ -1,0 +1,48 @@
+groups:
+  - name: tsar-security
+    interval: 30s
+    rules:
+      - alert: HighAuthFailureRate
+        expr: |
+          sum(rate(http_requests_total{path="/auth/login",status=~"401|403"}[5m]))
+          /
+          sum(rate(http_requests_total{path="/auth/login"}[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: high
+          team: security
+        annotations:
+          summary: "High authentication failure rate"
+          runbook: "docs/incident-response.md#auth-failure"
+
+      - alert: PrivilegeEscalationAttempt
+        expr: increase(app_authorization_denied_total{reason="insufficient_role"}[15m]) > 20
+        for: 5m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Repeated privilege escalation attempts"
+          runbook: "docs/incident-response.md#privilege-escalation"
+
+      - alert: UnexpectedEgress
+        expr: |
+          sum by (pod) (rate(container_network_transmit_bytes_total{namespace="prod"}[5m]))
+          > 10 * 1024 * 1024
+        for: 15m
+        labels:
+          severity: high
+          team: platform
+        annotations:
+          summary: "Unusual egress volume"
+          runbook: "docs/incident-response.md#exfiltration"
+
+      - alert: SecretAccessAnomaly
+        expr: increase(vault_secret_read_total{path=~".*prod.*"}[10m]) > 100
+        for: 5m
+        labels:
+          severity: high
+          team: security
+        annotations:
+          summary: "Anomalous production secret access"
+          runbook: "docs/incident-response.md#secret-exposure"
