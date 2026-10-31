@@ -1,0 +1,21 @@
+stages:
+  - test
+
+tsar:scan:
+  stage: test
+  image: python:3.12
+  before_script:
+    - pip install pyyaml
+    - git clone --depth 1 https://github.com/mohamedelghazali/TSAR.git .tsar
+  script:
+    - python .tsar/scripts/lint_rules.py
+    - python .tsar/skills/secret-scanner/scanner.py .
+    - python .tsar/skills/secure-review/review.py .
+    - python .tsar/skills/crypto-inventory/inventory.py . > cbom.json || true
+  artifacts:
+    paths:
+      - cbom.json
+    expire_in: 90 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
