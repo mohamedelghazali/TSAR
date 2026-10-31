@@ -22,7 +22,7 @@ python tools/tsar-orchestrator/orchestrator.py . --format json --output tsar-orc
     python tools/tsar-orchestrator/orchestrator.py . \
       --format markdown \
       --output tsar-orchestrator.md
-- uses: actions/upload-artifact@v4
+- uses: actions/upload-artifact@c2acdedd35a8824a1552c7137f8c18288c3ea469
   with:
     name: tsar-orchestrator
     path: tsar-orchestrator.md
