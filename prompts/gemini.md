@@ -1,6 +1,6 @@
 # TSAR Policy for Gemini
 
-Before generating code, apply the TSAR policy:
+Before generating code, fetch and apply the current `manifest.yaml` and `system/CORE_DIRECTIVE.md` policy:
 - No hardcoded secrets.
 - AEAD only (AES-256-GCM / XChaCha20-Poly1305).
 - Argon2id for passwords.
