@@ -31,8 +31,8 @@ resource "aws_db_instance" "app" {
 }
 
 resource "aws_db_parameter_group" "app" {
-  name                                = "tsar-app-${var.environment}"
-  family                              = "postgres16"
+  name   = "tsar-app-${var.environment}"
+  family = "postgres16"
   parameter {
     name  = "rds.force_ssl"
     value = "1"
