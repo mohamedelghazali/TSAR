@@ -6,6 +6,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-10-31
+
+### Fixed
+- Corrected repository-root resolution in the 39 affected top-level pytest modules.
+- Updated secret and static-review scanners to support file targets and reject invalid paths; reduced URL entropy false positives without excluding tests or examples.
+- Escaped dynamic HTML report values and exposed scanner execution status.
+- Extended SARIF output to include secret-scanner findings.
+- Updated `tsar init` to vendor `rules/` and `system/`, derive the manifest version, and preserve an existing pre-commit hook through a backup wrapper.
+- Corrected OWASP LLM Top 10 2026 rule filenames and content for LLM06, LLM07, LLM09, and LLM10.
+- Hardened the composite action ref handling and clarified the ML-KEM algorithm naming.
+
+### Changed
+- Bumped the manifest and component versions to 1.1.1.
+- Corrected documentation to report 37 rule domains.
+
 ## [1.1.0] — 2026-10-31
 
 ### Added
