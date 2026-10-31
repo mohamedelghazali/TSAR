@@ -5,38 +5,38 @@ This document records the evidence required before creating a stable release. Pa
 ## Repository state — 2026-10-31
 
 - Target branch: `main`
-- Current main commit: `79703ffe089d5b8124944895f128034b14b33f6a`
+- Current main commit: `1a9f3b64376fdf3f3f9f19982503e9bc3e1c9d01`
 - Release-hardening PR: [#3 — Release hardening v2](https://github.com/mohamedelghazali/TSAR/pull/3)
-- PR #3: merged; merge commit is the current main commit above.
+- PR #3: merged. Its hardening changes are included in main; PR #4 subsequently updated this qualification document.
 - This qualification document is being updated separately; no deployment or release tag is created by this update.
 
 ## CI evidence on current main
 
-The following GitHub Actions runs completed successfully for the current main commit:
+The following GitHub Actions runs completed successfully for the current main commit (`1a9f3b64376fdf3f3f9f19982503e9bc3e1c9d01`):
 
 | Workflow | Result | Evidence |
 |---|---|---|
-| TSAR Self-Test | 183 passed, 2 skipped | [Run 41223591256](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591256) |
-| Infrastructure Validation — Terraform | fmt, init, provider lock verification, validate passed | [Run 41223591167](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591167) |
-| Infrastructure Validation — Kubernetes | 10 resources valid; 0 invalid, errors, or skipped | [Run 41223591167](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591167) |
-| TSAR Orchestrator | 4 steps passed | [Run 41223591136](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591136) |
-| TSAR Validate Rules | Manifest valid; secret scanner found no secrets | [Run 41223591133](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591133) |
+| TSAR Self-Test | 183 passed, 2 skipped | [Run 41225566667](https://github.com/mohamedelghazali/TSAR/actions/runs/41225566667) |
+| Infrastructure Validation — Terraform | fmt, init, provider lock verification, validate passed | [Run 41225507671](https://github.com/mohamedelghazali/TSAR/actions/runs/41225507671) |
+| Infrastructure Validation — Kubernetes | 10 resources valid; 0 invalid, errors, or skipped | [Run 41225507671](https://github.com/mohamedelghazali/TSAR/actions/runs/41225507671) |
+| TSAR Orchestrator | 4 steps passed | [Run 41225566665](https://github.com/mohamedelghazali/TSAR/actions/runs/41225566665) |
+| TSAR Validate Rules | Manifest valid; secret scanner found no secrets | [Run 41225566691](https://github.com/mohamedelghazali/TSAR/actions/runs/41225566691) |
 
-The merged PR #3 also had successful PR-triggered runs for the full pytest suite, rule validation, orchestrator, PR enforcement, domain-specific tests, compliance references, Terraform validation, and strict Kubernetes schema validation.
+The merged PR #5 (release hardening) also had successful PR-triggered runs for the full pytest suite, rule validation, orchestrator, PR enforcement, domain-specific tests, compliance references, Terraform validation, and strict Kubernetes schema validation.
 
 ### Scope and limits of the current CI
 
 - Terraform CI runs formatting, backend-disabled initialization, provider lock verification, and configuration validation. It does **not** run a cloud-backed plan or apply.
 - Kubernetes CI validates schemas only. It does **not** contact a target cluster or prove that AWS resources, the External Secrets Operator, referenced secrets, certificates, image, IAM role, ingress, DNS, or network routes exist.
 - The repository's `verify-all.sh` is broader than the current `test.yml` workflow. The latest main CI evidence above does not establish that every optional check in `verify-all.sh` ran.
-- The policy-specific OPA workflow and LSP build workflow are path-filtered; their absence from the latest main push run list is not evidence that they ran on this commit.
+- The policy-specific OPA workflow and LSP build workflow are path-filtered. Their latest main-commit execution is not established by the three push workflows listed above; verify their dedicated run history or execute them explicitly for the release candidate.
 - Branch protection / ruleset enforcement could not be verified through the available GitHub integration. Confirm required status checks and review requirements in repository Settings before relying on them.
 
 ## Qualification matrix
 
 | Area | Verified | Still required |
 |---|---|---|
-| Core tests | Current main: 183 passed, 2 skipped | Review the two skips and run the complete release verification script |
+| Core tests | Current main: 183 passed, 2 skipped (pytest -q; skip reasons still need review) | Review the two skips and run the complete release verification script |
 | Rule and manifest integrity | Current main workflow passed | Continue checking rule coverage and upstream source changes |
 | Secret scanning | Current main repository scan passed | Maintain scanning on every proposed change and review scanner limitations |
 | Orchestrator | Current main: 4 steps passed | Review generated reports and ensure each production integration is exercised |
