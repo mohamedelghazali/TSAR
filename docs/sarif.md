@@ -11,7 +11,7 @@ python tools/tsar-cli/tsar.py scan . --format sarif > results.sarif
 ```yaml
 - name: TSAR scan (SARIF)
   run: python tools/tsar-cli/tsar.py scan . --format sarif > results.sarif
-- uses: github/codeql-action/upload-sarif@v3
+- uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370
   with:
     sarif_file: results.sarif
 ```
