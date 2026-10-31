@@ -34,7 +34,12 @@ check() {
 
 step "1. Python environment"
 python3 --version
-pip install -q pyyaml pytest 2>/dev/null || pip3 install -q pyyaml pytest 2>/dev/null
+if pip install -q pyyaml pytest 2>/dev/null || pip3 install -q pyyaml pytest 2>/dev/null; then
+  echo -e "${GREEN}PASS${NC}: python_dependencies"
+else
+  echo -e "${RED}FAIL${NC}: python_dependencies"
+  FAILED=$((FAILED + 1))
+fi
 
 step "2. Lint TSAR rules"
 check "lint_rules" python3 scripts/lint_rules.py
@@ -75,7 +80,7 @@ else
 fi
 
 step "7. Crypto inventory"
-python3 skills/crypto-inventory/inventory.py examples/secure | head -20
+check "crypto_inventory" python3 skills/crypto-inventory/inventory.py examples/secure
 
 step "8. Compliance references"
 for fw in soc2 iso27001 pci-dss hipaa gdpr; do
@@ -100,8 +105,8 @@ fi
 
 step "13. LSP build (if node installed)"
 if command -v node >/dev/null 2>&1; then
-  (cd tools/tsar-lsp && npm install --silent && npm run build --silent >/dev/null 2>&1)
-  if [ -f tools/tsar-lsp/out/server.js ]; then
+  rm -f tools/tsar-lsp/out/server.js
+  if (cd tools/tsar-lsp && npm install --silent && npm run build --silent >/dev/null 2>&1) && [ -f tools/tsar-lsp/out/server.js ]; then
     echo -e "${GREEN}PASS${NC}: lsp_build"
   else
     echo -e "${RED}FAIL${NC}: lsp_build"
@@ -113,11 +118,11 @@ fi
 
 step "14. Terraform validation (if terraform installed)"
 if command -v terraform >/dev/null 2>&1; then
-  (cd examples/secure/terraform && terraform init -backend=false >/dev/null 2>&1 && terraform validate >/dev/null 2>&1)
-  if [ $? -eq 0 ]; then
-    echo -e "${GREEN}PASS${NC}: terraform_validate"
+  if (cd examples/secure/terraform && terraform init -backend=false >/dev/null 2>&1); then
+    check "terraform_validate" bash -c 'cd examples/secure/terraform && terraform validate'
   else
-    echo -e "${YELLOW}SKIP${NC}: terraform validate requires init"
+    echo -e "${RED}FAIL${NC}: terraform_init"
+    FAILED=$((FAILED + 1))
   fi
 else
   echo -e "${YELLOW}SKIP${NC}: terraform not installed"
