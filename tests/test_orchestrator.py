@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 ORCH = ROOT / "tools" / "tsar-orchestrator" / "orchestrator.py"
 
 def test_markdown_output(tmp_path):
