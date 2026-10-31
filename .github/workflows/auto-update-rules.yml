@@ -13,10 +13,10 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ec52d0af729a7c50ced4261d17a07916f43f5b8e
         with:
           python-version: '3.12'
 
@@ -50,7 +50,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@86c87cfdd87dd582eb8b8f226cfec4e09d825326
         with:
           title: "chore(tsar): review upstream standards changes"
           body: |
