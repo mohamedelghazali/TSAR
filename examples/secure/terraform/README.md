@@ -1,20 +1,22 @@
-# TSAR Terraform Example
+# TSAR Terraform example
 
-Reference AWS deployment with:
-- Encrypted S3 with public access blocked.
-- RDS with encryption, private networking, IAM auth.
-- KMS key with rotation and scoped policy.
-- IAM role with least privilege and IRSA.
-- Security groups restricting ingress.
+This directory is a security-focused infrastructure example, not a production-ready deployment module. Review costs, quotas, naming, IAM trust relationships, and environment-specific networking before applying it.
 
-## Usage
+## Validation
+
+Run formatting, provider lock generation, initialization, and validation:
+
 ```bash
-terraform init
-terraform plan -var="environment=dev"
-terraform apply -var="environment=dev"
+terraform fmt -check
+terraform providers lock -platform=linux_amd64 -platform=darwin_arm64 -platform=windows_amd64
+terraform init -backend=false -lockfile=readonly
+terraform validate
 ```
 
-## Requirements
-- Remote state in encrypted S3 with DynamoDB lock.
-- Provider versions pinned.
-- Policy-as-code (OPA/Conftest) enforced in CI.
+The CI workflow generates a provider lockfile from the Terraform Registry and uploads it as a workflow artifact. Commit the reviewed \`.terraform.lock.hcl\` produced by the successful run before declaring this example reproducible.
+
+## Planning and applying
+
+A real \`terraform plan\` requires valid AWS credentials and environment-specific values, including the EKS OIDC issuer and its verified thumbprint. CI does not run \`apply\` and must not create cloud resources. Run a plan only in an isolated AWS test account after reviewing the resource costs and permissions.
+
+The RDS master password is managed by AWS Secrets Manager; no database password is stored in this repository.
