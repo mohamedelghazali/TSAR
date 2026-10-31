@@ -1,6 +1,6 @@
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 INFRA = ROOT / "rules" / "infrastructure"
 
 def test_files_present():
