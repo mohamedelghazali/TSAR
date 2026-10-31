@@ -1,7 +1,7 @@
 """Verify secure database examples have required hardening."""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "examples" / "secure" / "database"
 
 def test_postgres_example_uses_tls():
