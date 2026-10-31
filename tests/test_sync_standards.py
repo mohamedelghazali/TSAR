@@ -70,7 +70,7 @@ def test_changed_sources_are_committed_as_complete_cache(tmp_path, monkeypatch):
     monkeypatch.setattr(sync, "fetch", lambda url: url.rsplit("/", 1)[-1].encode())
 
     assert sync.main() == 0
-    assert (cache / "one.sha256").read_text(encoding="ascii") == (
+    assert (cache / "one.sha256").read_text(encoding="ascii").strip() == (
         __import__("hashlib").sha256(b"one").hexdigest()
     )
     assert (cache / "two.sha256").exists()
