@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    image: registry.example.com/tsar-app@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    read_only: true
+    user: "10001:10001"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp.json
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    ports:
+      - "127.0.0.1:8443:8443"
+    environment:
+      NODE_ENV: production
+    secrets:
+      - jwt_secret
+    healthcheck:
+      test: ["CMD", "/nodejs/bin/node", "-e", "require('http').get('http://127.0.0.1:8080/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    networks:
+      - app_net
+
+secrets:
+  jwt_secret:
+    external: true
+
+networks:
+  app_net:
+    driver: bridge
+    internal: false
