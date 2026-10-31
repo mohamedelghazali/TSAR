@@ -24,7 +24,7 @@ python tools/tsar-report/generate.py . --format json --output report.json
 ```yaml
 - name: TSAR report
   run: python tools/tsar-report/generate.py . --output tsar-report.html
-- uses: actions/upload-artifact@v4
+- uses: actions/upload-artifact@c2acdedd35a8824a1552c7137f8c18288c3ea469
   with:
     name: tsar-report
     path: tsar-report.html
