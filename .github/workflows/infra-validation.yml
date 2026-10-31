@@ -31,6 +31,12 @@ jobs:
         run: |
           terraform -chdir=examples/secure/terraform fmt -recursive
           terraform -chdir=examples/secure/terraform fmt -check
+      - name: Upload formatted Terraform source
+        uses: actions/upload-artifact@c2acdedd35a8824a1552c7137f8c18288c3ea469
+        with:
+          name: terraform-formatted-source
+          path: examples/secure/terraform/*.tf
+          if-no-files-found: error
       - name: Generate provider lock checksums
         run: |
           terraform -chdir=examples/secure/terraform providers lock \
