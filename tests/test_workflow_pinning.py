@@ -4,12 +4,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
+COMPOSITE_ACTIONS = ROOT / ".github" / "actions"
 
 
 def test_all_external_actions_are_pinned_to_full_commit_shas():
     pattern = re.compile(r"^\s*uses:\s*([^#\s]+)", re.MULTILINE)
     violations = []
-    for workflow in sorted(WORKFLOWS.glob("*.yml")):
+    files = list(WORKFLOWS.glob("*.yml")) + list(COMPOSITE_ACTIONS.rglob("action.yml"))
+    for workflow in sorted(files):
         text = workflow.read_text(encoding="utf-8")
         for reference in pattern.findall(text):
             if reference.startswith("./"):
