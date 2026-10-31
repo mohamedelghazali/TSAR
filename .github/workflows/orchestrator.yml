@@ -11,9 +11,9 @@ jobs:
   orchestrate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@ec52d0af729a7c50ced4261d17a07916f43f5b8e
         with:
           python-version: '3.12'
 
@@ -28,7 +28,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@c2acdedd35a8824a1552c7137f8c18288c3ea469
         with:
           name: orchestrator-report
           path: orchestrator-report.json
