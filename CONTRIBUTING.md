@@ -1,7 +1,7 @@
 # Contributing to TSAR
 
 ## Language and Style
-- **English only.** No Arabic, no emojis, no decorative text.
+- **English only.** No emojis, no decorative text.
 - **Comments**: only when explaining non-obvious security reasoning.
 - **Tables** for enumerable rules; prose for rationale.
 - **Consistent heading levels**; no skipped levels.
