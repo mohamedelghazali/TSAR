@@ -30,4 +30,5 @@ jobs:
         run: |
           curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
           sudo mv kubeconform /usr/local/bin/
-      # External Secrets Operator CRD is validated by its controller schema, not kubeconform's built-in catalog.\n      - run: kubeconform -strict -ignore-missing-schemas -summary examples/secure/kubernetes/
+      # kubeconform skips custom resources without published schemas; validate built-in Kubernetes objects here.
+      - run: kubeconform -strict -ignore-missing-schemas -summary examples/secure/kubernetes/
