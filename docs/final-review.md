@@ -52,6 +52,7 @@ Retain the evidence actually produced by the deployment:
 - Exception records with rationale and expiry.
 - Compliance mappings and the controls implemented by the adopting team.
 - Security review records and incident follow-ups.
+- Published release record and immutable version tag.
 
 Do not claim that an artifact exists unless the relevant workflow produced it.
 
@@ -61,4 +62,5 @@ Do not claim that an artifact exists unless the relevant workflow produced it.
 - [x] 171 manifest rule references resolve to existing files.
 - [x] 15 agent-specific prompts and one universal fallback present.
 - [x] Complete verify-all.sh release gate passed (186 pytest tests; OPA, LSP, Terraform, scanners, and reports).
-- [ ] Stable v1.1.1 Git tag and GitHub release published.
+- [x] Stable v1.1.1 Git tag and GitHub release published: [TSAR v1.1.1 — Stable Release](https://github.com/mohamedelghazali/TSAR/releases/tag/v1.1.1).
+- [x] Release tag v1.1.1 resolves to the qualified main commit: 61dce3e6d46dd25dfc0ad05617329d7ba89d43a5.
