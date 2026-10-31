@@ -1,0 +1,21 @@
+name: Messaging and DB Rules
+
+on:
+  push:
+    paths:
+      - 'rules/messaging/**'
+      - 'rules/database/**'
+      - 'rules/observability/**'
+      - 'rules/secrets/**'
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest pyyaml
+      - run: pytest tests/test_messaging_rules.py tests/test_database_rules.py tests/test_observability_rules.py tests/test_secrets_rules.py tests/test_db_examples.py -v
