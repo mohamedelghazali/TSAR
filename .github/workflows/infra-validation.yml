@@ -39,6 +39,7 @@ jobs:
           name: terraform-provider-lockfile
           path: examples/secure/terraform/.terraform.lock.hcl
           if-no-files-found: error
+          include-hidden-files: true
 
   kubernetes:
     runs-on: ubuntu-latest
