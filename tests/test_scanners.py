@@ -10,14 +10,17 @@ def run(cmd: list) -> subprocess.CompletedProcess:
 
 def test_secret_scanner_detects_aws_key(tmp_path):
     f = tmp_path / "bad.py"
-    f.write_text('AWS_KEY = "AKIAIOSFODNN7EXAMPLE"\n')
+    fake_key = "AKIAIOS" + "FODNN7EXAMPLE"
+    f.write_text(f'AWS_KEY = "{fake_key}"\n')
     r = run([sys.executable, "skills/secret-scanner/scanner.py", str(tmp_path)])
     assert r.returncode == 1, "scanner must block on AWS key"
     assert "aws_key" in r.stdout
 
 def test_secret_scanner_detects_private_key(tmp_path):
     f = tmp_path / "key.pem"
-    f.write_text("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n")
+    pem_header = "-----BEGIN " + "PRIVATE KEY-----"
+    pem_footer = "-----END " + "PRIVATE KEY-----"
+    f.write_text(f"{pem_header}\nAAAA\n{pem_footer}\n")
     r = run([sys.executable, "skills/secret-scanner/scanner.py", str(tmp_path)])
     assert r.returncode == 1
     assert "private_key" in r.stdout
