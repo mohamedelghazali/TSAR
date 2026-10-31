@@ -24,18 +24,21 @@ jobs:
         run: pip install pyyaml
 
       - name: Sync upstream standards
+        id: sync
         run: python scripts/sync_standards.py
 
       - name: Lint rules
         run: python scripts/lint_rules.py
 
       - name: Bump manifest version
+        if: steps.sync.outputs.changed == 'true'
         run: python scripts/bump_manifest.py
 
       - name: Create Pull Request
+        if: steps.sync.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
-          title: "chore(tsar): auto-sync rules and bump version"
+          title: "chore(tsar): review upstream standards fingerprint changes"
           branch: auto/tsar-sync
-          commit-message: "chore(tsar): auto-sync rules and bump version"
+          commit-message: "chore(tsar): record upstream standards fingerprint changes"
           delete-branch: true
