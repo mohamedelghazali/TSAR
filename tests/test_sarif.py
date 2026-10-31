@@ -38,7 +38,7 @@ def test_sarif_clean(tmp_path):
 
 
 def test_sarif_includes_secret_scanner_findings(tmp_path):
-    (tmp_path / "credential.py").write_text('AWS_KEY = "AKIAIOSFODNN7EXAMPLE"\n')
+    (tmp_path / "credential.py").write_text(f'AWS_KEY = "{ "AKIAIOS" + "FODNN7EXAMPLE" }' + "\n")
     out = tmp_path / "secrets.sarif"
     r = subprocess.run(
         [sys.executable, str(CLI), "scan", str(tmp_path),
