@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Merge current main into release branch
+      - name: Merge current main, preferring main on overlapping hunks
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -33,9 +33,17 @@ jobs:
             echo "release/stable-hardening already contains main"
             exit 0
           fi
-          if ! git merge --no-edit origin/main; then
-            echo "Merge conflicts require deliberate resolution:"
+          # Preserve non-conflicting release-branch commits and changes.
+          # For overlapping edits, main is the canonical source of truth.
+          if ! git merge --no-edit -X theirs origin/main; then
+            echo "Unresolved merge conflicts require manual review:"
             git diff --name-only --diff-filter=U
             exit 1
           fi
+          if [[ -n "$(git diff --name-only --diff-filter=U)" ]]; then
+            echo "Unresolved paths remain after merge strategy:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+          git diff --check
           git push origin HEAD:refs/heads/release/stable-hardening
