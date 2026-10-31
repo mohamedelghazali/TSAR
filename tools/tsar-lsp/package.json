@@ -1,6 +1,6 @@
 {
   "name": "tsar-lsp",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "TSAR language server",
   "main": "out/server.js",
   "bin": { "tsar-lsp": "out/server.js" },
