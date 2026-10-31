@@ -1,7 +1,7 @@
 """Verify supply chain rules cover required artifacts."""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 SC = ROOT / "rules" / "supply-chain"
 
 def test_files_present():
