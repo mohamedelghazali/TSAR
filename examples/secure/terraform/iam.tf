@@ -24,8 +24,8 @@ resource "aws_iam_role" "app" {
 
 data "aws_iam_policy_document" "app" {
   statement {
-    effect    = "Allow"
-    actions   = [
+    effect = "Allow"
+    actions = [
       "s3:GetObject",
       "s3:PutObject",
     ]
@@ -33,8 +33,8 @@ data "aws_iam_policy_document" "app" {
   }
 
   statement {
-    effect    = "Allow"
-    actions   = [
+    effect = "Allow"
+    actions = [
       "kms:Decrypt",
       "kms:GenerateDataKey",
     ]
