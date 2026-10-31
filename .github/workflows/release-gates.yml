@@ -1,0 +1,52 @@
+name: TSAR Complete Release Gates
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'verify-all.sh'
+      - 'requirements-dev.txt'
+      - 'policies/**'
+      - 'tools/tsar-lsp/**'
+      - '.github/workflows/release-gates.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-all:
+    name: Full verification (OPA, LSP, Terraform, pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ec52d0af729a7c50ced4261d17a07916f43f5b8e # v6.1.0
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '20'
+
+      - uses: hashicorp/setup-terraform@b75000b53e9ce4de2b4712237bbdb711bdc92aba
+        with:
+          terraform_version: '1.6.1'
+
+      - name: Install Python development dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
+
+      - name: Install checksum-verified OPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo opa https://github.com/open-policy-agent/opa/releases/download/v1.22.0/opa_linux_amd64_static
+          echo "791790254c598a942eb140959bcec9a47f844535a632fd01d11d870ba2a47047  opa" | sha256sum --check
+          chmod +x opa
+          sudo install -m 0755 opa /usr/local/bin/opa
+          opa version
+
+      - name: Run complete repository verification
+        run: ./verify-all.sh
