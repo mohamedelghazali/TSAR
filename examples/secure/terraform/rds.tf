@@ -8,6 +8,9 @@ resource "aws_db_instance" "app" {
   kms_key_id                          = aws_kms_key.app.arn
   storage_type                        = "gp3"
   db_subnet_group_name                = aws_db_subnet_group.app.name
+  parameter_group_name                = aws_db_parameter_group.app.name
+  username                            = "tsaradmin"
+  manage_master_user_password         = true
   vpc_security_group_ids              = [aws_security_group.rds.id]
   publicly_accessible                 = false
   multi_az                            = var.environment == "prod"

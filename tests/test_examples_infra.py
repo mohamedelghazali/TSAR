@@ -85,3 +85,11 @@ def test_infra_workflow_generates_multi_platform_lockfile():
     lock_text = lockfile.read_text(encoding="utf-8")
     assert 'version     = "5.40.0"' in lock_text
     assert len([line for line in lock_text.splitlines() if '"zh:' in line]) >= 10
+
+
+def test_k8s_networkpolicy_allows_postgres_only_to_private_subnets():
+    text = (K8S / "networkpolicy.yaml").read_text()
+    assert "cidr: 10.40.1.0/24" in text
+    assert "cidr: 10.40.2.0/24" in text
+    assert "port: 5432" in text
+    assert "cidr: 10.0.0.0/8" not in text
