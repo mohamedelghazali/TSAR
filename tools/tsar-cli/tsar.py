@@ -122,12 +122,15 @@ def cmd_drift(args) -> int:
     return 1
 
 def cmd_init(args) -> int:
+    """Install or refresh the vendored TSAR tree without discarding user data."""
+    import tempfile
     import yaml
 
-    target = Path(args.path).resolve()
+    target = Path(args.path).expanduser().resolve()
     if not target.is_dir():
         print(f"Target directory does not exist: {target}", file=sys.stderr)
         return 2
+
     prompt_map = {
         "claude": ("claude.md", "CLAUDE.md"),
         "claude-code": ("claude-code.md", "CLAUDE.md"),
@@ -140,57 +143,171 @@ def cmd_init(args) -> int:
     if args.agent not in prompt_map:
         print(f"Unknown agent: {args.agent}", file=sys.stderr)
         return 2
+
     prompt_name, destination_name = prompt_map[args.agent]
     prompt_source = ROOT / "prompts" / prompt_name
-    destination = target / destination_name
     if not prompt_source.is_file():
         print(f"Prompt not found: {prompt_source}", file=sys.stderr)
         return 2
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(prompt_source, destination)
 
     tsar_dir = target / ".tsar"
-    tsar_dir.mkdir(parents=True, exist_ok=True)
-    for source_name in ("skills", "scripts", "rules", "system"):
-        shutil.copytree(ROOT / source_name, tsar_dir / source_name, dirs_exist_ok=True)
-    shutil.copytree(TOOLS / "tsar-report", tsar_dir / "tsar-report", dirs_exist_ok=True)
-    shutil.copy2(ROOT / "manifest.yaml", tsar_dir / "manifest.yaml")
-    manifest = yaml.safe_load((ROOT / "manifest.yaml").read_text(encoding="utf-8")) or {}
-    version = str(manifest.get("version", "unknown"))
-    (tsar_dir / "config.json").write_text(json.dumps({
-        "manifest_version": version, "agent": args.agent, "vendored": True,
-    }, indent=2) + "\n", encoding="utf-8")
+    if tsar_dir.is_symlink() or (tsar_dir.exists() and not tsar_dir.is_dir()):
+        print(f"Refusing to replace non-directory TSAR path: {tsar_dir}", file=sys.stderr)
+        return 2
 
-    hook_source = ROOT / "integrations" / "git-hooks" / "pre-commit"
-    tsar_hook = tsar_dir / "pre-commit"
-    if hook_source.is_file():
-        shutil.copy2(hook_source, tsar_hook)
-        tsar_hook.chmod(0o755)
+    manifest_path = ROOT / "manifest.yaml"
+    try:
+        manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        print(f"Cannot read TSAR manifest: {exc}", file=sys.stderr)
+        return 2
+
+    version = str(manifest.get("version", "unknown"))
+    stage_dir = None
+    backup_dir = target / f".tsar.backup.{time.time_ns()}"
+    managed_entries = {"skills", "scripts", "rules", "system", "tsar-report",
+                       "manifest.yaml", "config.json", "pre-commit"}
+
+    try:
+        stage_dir = Path(tempfile.mkdtemp(prefix=".tsar-stage-", dir=str(target)))
+
+        # Preserve user-managed top-level entries. The complete previous .tsar
+        # tree is also retained as a timestamped backup for recovery.
+        if tsar_dir.is_dir():
+            for child in tsar_dir.iterdir():
+                if child.name in managed_entries:
+                    continue
+                destination = stage_dir / child.name
+                if child.is_dir() and not child.is_symlink():
+                    shutil.copytree(child, destination, symlinks=True)
+                elif child.is_symlink():
+                    destination.symlink_to(os.readlink(child), target_is_directory=child.is_dir())
+                else:
+                    shutil.copy2(child, destination)
+
+        ignore_generated = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache")
+        for source_name in ("skills", "scripts", "rules", "system"):
+            shutil.copytree(
+                ROOT / source_name,
+                stage_dir / source_name,
+                ignore=ignore_generated,
+                symlinks=True,
+            )
+        shutil.copytree(
+            TOOLS / "tsar-report",
+            stage_dir / "tsar-report",
+            ignore=ignore_generated,
+            symlinks=True,
+        )
+        shutil.copy2(manifest_path, stage_dir / "manifest.yaml")
+        (stage_dir / "config.json").write_text(
+            json.dumps({
+                "manifest_version": version,
+                "agent": args.agent,
+                "vendored": True,
+            }, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        hook_source = ROOT / "integrations" / "git-hooks" / "pre-commit"
+        if hook_source.is_file():
+            shutil.copy2(hook_source, stage_dir / "pre-commit")
+            (stage_dir / "pre-commit").chmod(0o755)
+
+        # Move the previous tree aside, then promote the fully prepared tree.
+        # If promotion fails, restore the previous tree before returning.
+        previous_moved = False
+        if tsar_dir.exists():
+            os.replace(tsar_dir, backup_dir)
+            previous_moved = True
+        try:
+            os.replace(stage_dir, tsar_dir)
+            stage_dir = None
+        except Exception:
+            if previous_moved and backup_dir.exists() and not tsar_dir.exists():
+                os.replace(backup_dir, tsar_dir)
+            raise
+
+    except Exception as exc:
+        if stage_dir is not None and stage_dir.exists():
+            shutil.rmtree(stage_dir, ignore_errors=True)
+        print(f"TSAR installation failed; previous installation was preserved: {exc}",
+              file=sys.stderr)
+        return 1
+
+    if backup_dir.exists():
+        print(f"Previous TSAR installation retained at {backup_dir.name}")
+
+    # Never overwrite an existing agent instruction file: it may contain
+    # project-specific guidance maintained by the user.
+    destination = target / destination_name
+    if destination.exists() or destination.is_symlink():
+        print(f"Existing agent file preserved: {destination}")
+    else:
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            prompt_temp = destination.with_name(f".{destination.name}.tsar-{time.time_ns()}.tmp")
+            shutil.copy2(prompt_source, prompt_temp)
+            try:
+                os.link(prompt_temp, destination)
+                prompt_temp.unlink()
+            except FileExistsError:
+                prompt_temp.unlink(missing_ok=True)
+                print(f"Agent file appeared during installation; preserved: {destination}")
+            except (AttributeError, NotImplementedError, OSError):
+                if destination.exists():
+                    prompt_temp.unlink(missing_ok=True)
+                    print(f"Agent file appeared during installation; preserved: {destination}")
+                else:
+                    os.replace(prompt_temp, destination)
+        except Exception as exc:
+            print(f"WARNING: TSAR installed, but agent prompt was not created: {exc}",
+                  file=sys.stderr)
+
+    # Install the hook without destroying a pre-existing user hook.
     hooks_dir = target / ".git" / "hooks"
+    hook_source = ROOT / "integrations" / "git-hooks" / "pre-commit"
     if hooks_dir.is_dir() and hook_source.is_file():
         hook_destination = hooks_dir / "pre-commit"
-        if not hook_destination.exists():
-            shutil.copy2(hook_source, hook_destination)
-            hook_destination.chmod(0o755)
-        else:
-            existing = hook_destination.read_text(encoding="utf-8", errors="replace")
-            if "TSAR" not in existing:
-                backup_name = f"pre-commit.user-backup.{time.time_ns()}"
-                backup_path = hooks_dir / backup_name
-                shutil.copy2(hook_destination, backup_path)
-                wrapper = (
-                    "#!/usr/bin/env bash\nset -euo pipefail\n"
-                    + 'HOOK_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"\n'
-                    + f'"$HOOK_DIR/{backup_name}" "$@"\n'
-                    + 'export TSAR_DIR="$(git rev-parse --show-toplevel)/.tsar"\n'
-                    + '"$TSAR_DIR/pre-commit" "$@"\n'
-                )
-                hook_destination.write_text(wrapper, encoding="utf-8")
-                hook_destination.chmod(0o755)
+        try:
+            if not hook_destination.exists():
+                hook_temp = hooks_dir / f".pre-commit.tsar-{time.time_ns()}.tmp"
+                shutil.copy2(hook_source, hook_temp)
+                hook_temp.chmod(0o755)
+                try:
+                    os.link(hook_temp, hook_destination)
+                    hook_temp.unlink()
+                except (AttributeError, NotImplementedError, OSError):
+                    if hook_destination.exists():
+                        hook_temp.unlink(missing_ok=True)
+                    else:
+                        os.replace(hook_temp, hook_destination)
             else:
-                print("Existing pre-commit hook already contains TSAR; left unchanged.")
-    print(f"TSAR vendored at {tsar_dir}; manifest version {version}")
+                existing = hook_destination.read_text(encoding="utf-8", errors="replace")
+                if "TSAR_DIR=" not in existing and "TSAR pre-commit hook" not in existing:
+                    backup_name = f"pre-commit.user-backup.{time.time_ns()}"
+                    backup_path = hooks_dir / backup_name
+                    shutil.copy2(hook_destination, backup_path)
+                    wrapper = (
+                        "#!/usr/bin/env bash\nset -euo pipefail\n"
+                        + 'HOOK_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"\n'
+                        + f'"$HOOK_DIR/{backup_name}" "$@"\n'
+                        + 'export TSAR_DIR="$(git rev-parse --show-toplevel)/.tsar"\n'
+                        + '"$TSAR_DIR/pre-commit" "$@"\n'
+                    )
+                    wrapper_temp = hooks_dir / f".pre-commit.tsar-{time.time_ns()}.tmp"
+                    wrapper_temp.write_text(wrapper, encoding="utf-8")
+                    wrapper_temp.chmod(0o755)
+                    os.replace(wrapper_temp, hook_destination)
+                else:
+                    print("Existing TSAR pre-commit integration preserved.")
+        except Exception as exc:
+            print(f"WARNING: TSAR installed, but Git hook setup failed: {exc}",
+                  file=sys.stderr)
+
+    print(f"TSAR v{version} installed at {tsar_dir}")
     return 0
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="tsar", description="TSAR security CLI")
     sub = p.add_subparsers(dest="command", required=True)
