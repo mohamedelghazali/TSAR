@@ -8,7 +8,8 @@ ROOT = Path(__file__).resolve().parent.parent
 REPORT = ROOT / "tools" / "tsar-report" / "generate.py"
 
 def test_html_report(tmp_path):
-    (tmp_path / "bad.py").write_text('K = "AKIAIOSFODNN7EXAMPLE"\n')
+    fake_key = "AKIAIOS" + "FODNN7EXAMPLE"
+    (tmp_path / "bad.py").write_text(f'K = "{fake_key}"\n')
     out = tmp_path / "report.html"
     r = subprocess.run(
         [sys.executable, str(REPORT), str(tmp_path), "--output", str(out)],
@@ -21,7 +22,8 @@ def test_html_report(tmp_path):
     assert "high" in html.lower() or "HIGH" in html
 
 def test_json_report(tmp_path):
-    (tmp_path / "bad.py").write_text('K = "AKIAIOSFODNN7EXAMPLE"\n')
+    fake_key = "AKIAIOS" + "FODNN7EXAMPLE"
+    (tmp_path / "bad.py").write_text(f'K = "{fake_key}"\n')
     out = tmp_path / "report.json"
     r = subprocess.run(
         [sys.executable, str(REPORT), str(tmp_path), "--format", "json", "--output", str(out)],
