@@ -37,9 +37,5 @@ spec:
       ports:
         - protocol: UDP
           port: 53
-    - to:
-        - ipBlock:
-            cidr: 10.0.0.0/8
-      ports:
         - protocol: TCP
-          port: 5432
+          port: 53
