@@ -14,7 +14,7 @@
 | OPA policies | 3 |
 | Compliance frameworks | 5 |
 | Languages with secure examples | 9 |
-| Manifest groups | 35 |
+| Manifest groups | 38 |
 | pytest files | 40+ |
 
 ## Honest Limitations
