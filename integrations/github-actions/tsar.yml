@@ -1,0 +1,39 @@
+name: TSAR Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  tsar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install TSAR dependencies
+        run: pip install pyyaml
+
+      - name: Clone TSAR rules
+        run: |
+          git clone --depth 1 https://github.com/mohamedelghazali/TSAR.git .tsar
+          cd .tsar && python scripts/lint_rules.py
+
+      - name: Secret scan
+        run: python .tsar/skills/secret-scanner/scanner.py .
+
+      - name: Secure review
+        run: python .tsar/skills/secure-review/review.py .
+
+      - name: Crypto inventory
+        run: python .tsar/skills/crypto-inventory/inventory.py . > cbom.json || true
+
+      - name: Upload CBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbom
+          path: cbom.json
