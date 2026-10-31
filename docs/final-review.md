@@ -2,94 +2,20 @@
 
 ## Coverage Summary
 
-### By Domain
-| Domain | Files | Tests |
-|---|---:|---|
-| Core policy | 4 | test_lint |
-| Cryptography | 6 | test_crypto |
-| Quantum | 5 | test_quantum |
-| OWASP LLM | 4 | test_llm |
-| OWASP Web | 10 | test_owasp_web |
-| Agentic AI | 2 | test_agentic |
-| AI Models | 3 | test_ai_models |
-| Platform | 9 | test_platform |
-| Hardware | 5 | test_hardware |
-| Data | 4 | test_data |
-| Cloud | 4 | test_cloud |
-| Containers | 3 | test_containers |
-| API | 4 | test_api |
-| IAM | 4 | test_iam |
-| Supply Chain | 3 | test_supply_chain |
-| Messaging | 6 | test_messaging |
-| Database | 6 | test_database |
-| Observability | 4 | test_observability |
-| Secrets | 3 | test_secrets |
-| Networking | 6 | test_networking |
-| Compute | 2 | test_compute |
-| Testing | 4 | test_testing |
-| Governance | 5 | test_governance |
-| Privacy | 6 | test_privacy |
-| Threat Intel | 4 | test_threat_intel |
-| Forensics | 3 | test_forensics |
-| Identity Federation | 4 | test_identity |
-| Email | 4 | test_email |
-| Endpoint | 5 | test_endpoint |
-| Backup | 4 | test_backup |
-| Disaster Recovery | 4 | test_dr |
-| Legal Hold | 3 | test_legal_hold |
-| Application Security | 4 | test_appsec |
-| Infrastructure | 3 | test_infrastructure |
-| Development | 4 | test_development |
-| Emerging | 4 | test_emerging |
-
-**Total rule files**: ~160 across 36 domains.
-
-### By Language (examples)
-| Language | Example | Tested |
-|---|---|---|
-| Python | examples/secure/python | yes |
-| Node.js | examples/secure/node | yes |
-| Go | examples/secure/go | yes |
-| Rust | examples/secure/rust | yes |
-| Java | examples/secure/java | yes |
-| Kotlin | examples/secure/kotlin | yes |
-| Swift | examples/secure/swift | yes |
-| TypeScript (React Native) | examples/secure/react-native | yes |
-| Dart (Flutter) | examples/secure/flutter | yes |
-
-### By Tool
-| Tool | Purpose | Tested |
-|---|---|---|
-| tsar-cli | Unified CLI | yes |
-| tsar-orchestrator | Pipeline runner | yes |
-| tsar-report | Report generator | yes |
-| tsar-lsp | Editor diagnostics | build test |
-| tsar-web | Dashboard | manual |
-| secret-scanner | Secret detection | yes |
-| secure-review | SAST-lite | yes |
-| crypto-inventory | CBOM | yes |
-| threat-modeler | STRIDE | yes |
-
-### By Integration
-| Platform | Template | Tested |
-|---|---|---|
-| GitHub Actions | integrations/github-actions | yes |
-| GitLab CI | integrations/gitlab-ci | manual |
-| Bitbucket | integrations/bitbucket | manual |
-| Azure DevOps | integrations/azure-devops | manual |
-| Pre-commit | integrations/git-hooks | yes |
-
-### By Compliance
-| Framework | Mapping | Verified |
-|---|---|---|
-| SOC 2 | docs/compliance/soc2.md | test_compliance_docs |
-| ISO 27001 | docs/compliance/iso27001.md | test_compliance_docs |
-| PCI DSS | docs/compliance/pci-dss.md | test_compliance_docs |
-| HIPAA | docs/compliance/hipaa.md | test_compliance_docs |
-| GDPR | docs/compliance/gdpr.md | test_compliance_docs |
-
-### By Agent
-All 15 agents have prompt files and are listed in the compatibility matrix.
+### Totals
+| Metric | Count |
+|---|---|
+| Rule files | 170+ |
+| Rule domains | 36 |
+| Agent prompts | 16 |
+| Skill scripts | 8 (4 SKILL.md + 4 Python) |
+| Tools | 5 |
+| CI integrations | 5 (4 platforms + pre-commit) |
+| OPA policies | 3 |
+| Compliance frameworks | 5 |
+| Languages with secure examples | 9 |
+| Manifest groups | 35 |
+| pytest files | 40+ |
 
 ## Honest Limitations
 
