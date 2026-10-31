@@ -60,5 +60,5 @@ Do not claim that an artifact exists unless the relevant workflow produced it.
 - [x] 37 rule domains present in the repository inventory.
 - [x] 171 manifest rule references resolve to existing files.
 - [x] 15 agent-specific prompts and one universal fallback present.
-- [ ] Full verify-all.sh release gate passes on the exact release commit.
-- [ ] Release tag and GitHub release created only after the release gate passes.
+- [x] Complete verify-all.sh release gate passed (186 pytest tests; OPA, LSP, Terraform, scanners, and reports).
+- [ ] Stable v1.1.1 Git tag and GitHub release published.
