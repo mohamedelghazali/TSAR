@@ -49,7 +49,7 @@ def test_clean_report(tmp_path):
 
 
 def test_html_report_escapes_untrusted_paths(tmp_path):
-    malicious = tmp_path / "<script>alert(1)</script>.py"
+    malicious = tmp_path / "<script>alert(1)&.py"
     malicious.write_text("eval(user_input)\n")
     out = tmp_path / "safe-report.html"
     r = subprocess.run(
@@ -58,5 +58,5 @@ def test_html_report_escapes_untrusted_paths(tmp_path):
     )
     assert r.returncode == 0, r.stdout + r.stderr
     rendered = out.read_text()
-    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in rendered
+    assert "&lt;script&gt;alert(1)&amp;.py" in rendered
     assert "<script>alert(1)</script>" not in rendered
