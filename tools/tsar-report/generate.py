@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""TSAR report generator: HTML and PDF from scanner output."""
+"""TSAR report generator: escaped HTML and structured JSON from scanner output."""
 import argparse
 import datetime
+import html
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -32,58 +34,58 @@ th { background: #f4f4f4; }
 <body>
 <h1>TSAR Security Report</h1>
 <p class="meta">Generated: {generated} &middot; Manifest version: {manifest_version} &middot; Target: {target}</p>
-
+<p class="meta">Scanner execution: {scanner_status}</p>
 <div class="summary">
 <strong>Summary:</strong> {high} high, {medium} medium, {low} low findings, {secrets} secrets detected.
 </div>
-
 <h2>Secrets</h2>
 {secrets_table}
-
 <h2>Secure Review Findings</h2>
 {review_table}
-
 <h2>Crypto Inventory (CBOM)</h2>
 {cbom_table}
 </body>
 </html>
 """
 
-def run_scanner(script: Path, target: str) -> str:
+def run_scanner(script: Path, target: str) -> tuple[str, int]:
     try:
-        r = subprocess.run([sys.executable, str(script), target],
-                           capture_output=True, text=True, timeout=600)
-        return r.stdout + r.stderr
+        result = subprocess.run(
+            [sys.executable, str(script), target],
+            capture_output=True, text=True, timeout=600, check=False,
+        )
+        return result.stdout + result.stderr, result.returncode
     except subprocess.TimeoutExpired:
-        return "TIMEOUT"
+        return "ERROR: scanner timed out after 600 seconds", 124
+    except OSError as exc:
+        return f"ERROR: unable to execute scanner: {exc}", 127
 
 def read_manifest_version() -> str:
     import yaml
-    data = yaml.safe_load((ROOT / "manifest.yaml").read_text())
-    return data.get("version", "unknown")
+    data = yaml.safe_load((ROOT / "manifest.yaml").read_text(encoding="utf-8"))
+    return str(data.get("version", "unknown"))
 
 def parse_secrets(output: str) -> list[dict]:
     rows = []
+    pattern = re.compile(r"^BLOCK:\s+(.*):(\d+)\s+\[([^]]+)\]\s*$")
     for line in output.splitlines():
-        if line.startswith("BLOCK:"):
-            parts = line[len("BLOCK:"):].strip().split()
-            if len(parts) >= 2:
-                location = parts[0]
-                kind = parts[1].strip("[]")
-                rows.append({"location": location, "kind": kind})
+        match = pattern.match(line)
+        if match:
+            rows.append({"location": f"{match.group(1)}:{match.group(2)}", "kind": match.group(3)})
     return rows
 
 def parse_review(output: str) -> list[dict]:
     rows = []
+    pattern = re.compile(r"^(HIGH|MEDIUM|LOW):\s+(.*):(\d+)\s+\[([^]]+)\]\s*(.*)$")
     for line in output.splitlines():
-        for sev in ("HIGH", "MEDIUM", "LOW"):
-            if line.startswith(f"{sev}:"):
-                rest = line[len(sev) + 1:].strip()
-                parts = rest.split(" ", 1)
-                if len(parts) == 2:
-                    location = parts[0]
-                    detail = parts[1]
-                    rows.append({"severity": sev, "location": location, "detail": detail})
+        match = pattern.match(line)
+        if match:
+            rows.append({
+                "severity": match.group(1),
+                "location": f"{match.group(2)}:{match.group(3)}",
+                "kind": match.group(4),
+                "detail": match.group(5),
+            })
     return rows
 
 def parse_cbom(output: str) -> dict:
@@ -95,79 +97,115 @@ def parse_cbom(output: str) -> dict:
 def render_table(rows: list[dict], columns: list[str]) -> str:
     if not rows:
         return "<p>None.</p>"
-    head = "".join(f"<th>{c}</th>" for c in columns)
-    body = ""
+    head = "".join(f"<th>{html.escape(column, quote=True)}</th>" for column in columns)
+    body = []
     for row in rows:
-        cells = ""
-        for c in columns:
-            value = row.get(c.lower(), "")
+        cells = []
+        for column in columns:
+            value = str(row.get(column.lower(), ""))
             cls = ""
-            if c.lower() == "severity":
-                cls = f' class="sev-{value.lower()}"'
-            cells += f"<td{cls}>{value}</td>"
-        body += f"<tr>{cells}</tr>"
-    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+            if column.lower() == "severity":
+                severity = value.lower()
+                if severity in {"high", "medium", "low"}:
+                    cls = f' class="sev-{severity}"'
+            cells.append(f"<td{cls}>{html.escape(value, quote=True)}</td>")
+        body.append("<tr>" + "".join(cells) + "</tr>")
+    return "<table><thead><tr>" + head + "</tr></thead><tbody>" + "".join(body) + "</tbody></table>"
 
 def render_cbom(cbom: dict) -> str:
-    algos = cbom.get("algorithms", {})
-    if not algos:
+    algorithms = cbom.get("algorithms", {})
+    if not algorithms:
         return "<p>No algorithms detected.</p>"
-    rows = []
-    for name, info in algos.items():
-        rows.append({
-            "algorithm": name,
+    rows = [
+        {
+            "algorithm": str(name),
             "count": str(info.get("count", 0)),
             "risky": "yes" if name in cbom.get("risky", []) else "no",
-        })
+        }
+        for name, info in algorithms.items()
+    ]
     return render_table(rows, ["Algorithm", "Count", "Risky"])
 
+def _status_label(code: int) -> str:
+    if code == 0:
+        return "completed"
+    if code == 1:
+        return "completed_with_findings"
+    return f"execution_error_{code}"
+
+def collect(target: str) -> dict:
+    secret_output, secret_rc = run_scanner(SKILLS / "secret-scanner" / "scanner.py", target)
+    review_output, review_rc = run_scanner(SKILLS / "secure-review" / "review.py", target)
+    cbom_output, cbom_rc = run_scanner(SKILLS / "crypto-inventory" / "inventory.py", target)
+    return {
+        "secrets": parse_secrets(secret_output),
+        "review": parse_review(review_output),
+        "cbom": parse_cbom(cbom_output),
+        "scanner_status": {
+            "secret_scanner": _status_label(secret_rc),
+            "secure_review": _status_label(review_rc),
+            "crypto_inventory": _status_label(cbom_rc),
+        },
+        "scanner_output": {
+            "secret_scanner": secret_output,
+            "secure_review": review_output,
+            "crypto_inventory": cbom_output,
+        },
+        "scanner_exit_codes": {
+            "secret_scanner": secret_rc,
+            "secure_review": review_rc,
+            "crypto_inventory": cbom_rc,
+        },
+    }
+
 def generate_html(target: str) -> str:
-    secrets_out = run_scanner(SKILLS / "secret-scanner" / "scanner.py", target)
-    review_out = run_scanner(SKILLS / "secure-review" / "review.py", target)
-    cbom_out = run_scanner(SKILLS / "crypto-inventory" / "inventory.py", target)
-
-    secrets = parse_secrets(secrets_out)
-    review = parse_review(review_out)
-    cbom = parse_cbom(cbom_out)
-
-    counts = {sev: sum(1 for r in review if r["severity"] == sev)
-              for sev in ("HIGH", "MEDIUM", "LOW")}
-
-    return HTML_TEMPLATE.format(
-        generated=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
-        manifest_version=read_manifest_version(),
-        target=target,
-        high=counts["HIGH"], medium=counts["MEDIUM"], low=counts["LOW"],
-        secrets=len(secrets),
-        secrets_table=render_table(secrets, ["Location", "Kind"]),
-        review_table=render_table(review, ["Severity", "Location", "Detail"]),
-        cbom_table=render_cbom(cbom),
-    )
+    data = collect(target)
+    review = data["review"]
+    counts = {severity: sum(1 for row in review if row["severity"] == severity)
+              for severity in ("HIGH", "MEDIUM", "LOW")}
+    values = {
+        "generated": html.escape(datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), quote=True),
+        "manifest_version": html.escape(read_manifest_version(), quote=True),
+        "target": html.escape(str(target), quote=True),
+        "scanner_status": html.escape(json.dumps(data["scanner_status"], sort_keys=True), quote=True),
+        "high": counts["HIGH"], "medium": counts["MEDIUM"], "low": counts["LOW"],
+        "secrets": len(data["secrets"]),
+        "secrets_table": render_table(data["secrets"], ["Location", "Kind"]),
+        "review_table": render_table(review, ["Severity", "Location", "Kind", "Detail"]),
+        "cbom_table": render_cbom(data["cbom"]),
+    }
+    rendered = HTML_TEMPLATE
+    for key, value in values.items():
+        rendered = rendered.replace("{" + key + "}", str(value))
+    return rendered
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Generate TSAR security report")
-    p.add_argument("path", nargs="?", default=".")
-    p.add_argument("--format", choices=["html", "json"], default="html")
-    p.add_argument("--output", default="tsar-report.html")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser(description="Generate TSAR security report")
+    parser.add_argument("path", nargs="?", default=".")
+    parser.add_argument("--format", choices=["html", "json"], default="html")
+    parser.add_argument("--output", default="tsar-report.html")
+    args = parser.parse_args()
 
-    if args.format == "html":
-        html = generate_html(args.path)
-        Path(args.output).write_text(html)
-        print(f"Report written to {args.output}")
-        return 0
-
+    data = collect(args.path)
     report = {
         "generated": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "manifest_version": read_manifest_version(),
         "target": args.path,
-        "secrets": parse_secrets(run_scanner(SKILLS / "secret-scanner" / "scanner.py", args.path)),
-        "review": parse_review(run_scanner(SKILLS / "secure-review" / "review.py", args.path)),
-        "cbom": parse_cbom(run_scanner(SKILLS / "crypto-inventory" / "inventory.py", args.path)),
+        "secrets": data["secrets"],
+        "review": data["review"],
+        "cbom": data["cbom"],
+        "scanner_status": data["scanner_status"],
+        "scanner_exit_codes": data["scanner_exit_codes"],
+        "scanner_output": data["scanner_output"],
     }
-    Path(args.output).write_text(json.dumps(report, indent=2))
+    if args.format == "html":
+        output = generate_html(args.path)
+    else:
+        output = json.dumps(report, indent=2)
+    Path(args.output).write_text(output, encoding="utf-8")
     print(f"Report written to {args.output}")
-    return 0
+    # Findings are reportable; only scanner execution errors produce a non-zero report status.
+    return 2 if any(code not in (0, 1) for code in data["scanner_exit_codes"].values()) else 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
