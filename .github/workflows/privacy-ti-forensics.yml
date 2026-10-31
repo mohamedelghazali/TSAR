@@ -1,0 +1,20 @@
+name: Privacy, TI, Forensics Rules
+
+on:
+  push:
+    paths:
+      - 'rules/privacy/**'
+      - 'rules/threat-intel/**'
+      - 'rules/forensics/**'
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest pyyaml
+      - run: pytest tests/test_privacy_rules.py tests/test_threat_intel_rules.py tests/test_forensics_rules.py tests/test_multicloud_tf.py -v
