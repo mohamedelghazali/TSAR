@@ -1,0 +1,35 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: tsar-daily
+  namespace: velero
+spec:
+  schedule: "0 2 * * *"
+  template:
+    includedNamespaces:
+      - prod
+      - staging
+    excludedResources:
+      - events
+      - pods
+    storageLocation: aws-immutable
+    volumeSnapshotLocations:
+      - aws-immutable
+    ttl: 720h
+    hooks:
+      resources:
+        - name: postgres-checkpoint
+          includedNamespaces:
+            - prod
+          labelSelector:
+            matchLabels:
+              app: postgres
+          pre:
+            - exec:
+                container: postgres
+                command:
+                  - /bin/sh
+                  - -c
+                  - "psql -U postgres -c 'CHECKPOINT'"
+                onError: Fail
+                timeout: 60s
