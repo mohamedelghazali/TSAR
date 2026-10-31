@@ -11,25 +11,45 @@ on:
       - 'examples/secure/terraform/**'
       - 'examples/secure/kubernetes/**'
 
+permissions:
+  contents: read
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # v4
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1 # v3
         with:
           terraform_version: '1.6.1'
       - run: terraform -chdir=examples/secure/terraform fmt -check
-      - run: terraform -chdir=examples/secure/terraform init -backend=false
+      - run: terraform -chdir=examples/secure/terraform init -backend=false -lockfile=readonly
+      - run: >-
+          terraform -chdir=examples/secure/terraform providers lock
+          -platform=linux_amd64
+          -platform=windows_amd64
+          -platform=darwin_arm64
+      - run: git diff --exit-code -- examples/secure/terraform/.terraform.lock.hcl
       - run: terraform -chdir=examples/secure/terraform validate
 
   kubernetes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # v4
+        with:
+          persist-credentials: false
       - name: Install kubeconform
         run: |
-          curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
-          sudo mv kubeconform /usr/local/bin/
-      # kubeconform skips custom resources without published schemas; validate built-in Kubernetes objects here.
-      - run: kubeconform -strict -ignore-missing-schemas -summary examples/secure/kubernetes/
+          set -euo pipefail
+          curl -fsSLo kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+          echo "9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883  kubeconform.tar.gz" | sha256sum --check
+          tar -xzf kubeconform.tar.gz kubeconform
+          sudo install -m 0755 kubeconform /usr/local/bin/kubeconform
+      # ExternalSecret schema is pinned to an immutable CRDs-catalog commit.
+      - run: >-
+          kubeconform -strict -summary
+          -schema-location default
+          -schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/3eb90d47aba8d61919d4419dd38301536e32a94b/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+          examples/secure/kubernetes/

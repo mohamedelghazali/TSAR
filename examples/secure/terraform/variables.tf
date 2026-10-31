@@ -13,12 +13,6 @@ variable "environment" {
   }
 }
 
-variable "allowed_cidr_blocks" {
-  type        = list(string)
-  description = "CIDR blocks allowed to reach the application security group"
-  default     = []
-}
-
 variable "vpc_cidr" {
   type        = string
   description = "CIDR range for the example VPC"

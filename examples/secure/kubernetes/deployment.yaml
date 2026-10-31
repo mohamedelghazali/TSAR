@@ -24,7 +24,8 @@ spec:
           type: RuntimeDefault
       containers:
         - name: app
-          image: registry.example.com/tsar-app@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          # TEMPLATE: replace with a published image and verified immutable SHA-256 digest before applying.
+          image: registry.example.com/tsar-app@sha256:REPLACE_WITH_VERIFIED_64_HEX_DIGEST
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

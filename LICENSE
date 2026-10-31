@@ -1,21 +1,103 @@
-MIT License
+TSAR CUSTOM SOURCE-AVAILABLE LICENSE 1.0
+Copyright (c) 2026 Mohamed El Ghazali. All rights reserved.
 
-Copyright (c) 2026 Mohamed El Ghazali 
+IMPORTANT: This is a custom source-available license, not an OSI-approved
+Open Source license. It is intended to permit non-commercial evaluation,
+learning, education, and independent research while reserving commercial use
+for a separate written license.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. DEFINITIONS
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+"Software" means the TSAR source code, rules, prompts, documentation, scripts,
+examples, and other materials in this repository that are owned by the
+Copyright Holder and distributed under this license.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+"Commercial Use" means use primarily intended for or directed toward
+commercial advantage or monetary compensation. It includes, without
+limitation: use by or on behalf of a for-profit business in its operations;
+production deployment supporting a commercial product or service; providing
+TSAR or a substantially similar offering as a paid or revenue-generating
+service; SaaS, hosting, consulting, integration, resale, or paid training
+based on the Software; and incorporating the Software into a commercial
+product, platform, or service.
+
+2. PERMITTED NON-COMMERCIAL USE
+
+Subject to this license, the Copyright Holder grants you a limited,
+non-exclusive, worldwide, non-transferable, royalty-free license to access,
+use, reproduce, and modify the Software solely for personal, educational,
+academic, and independent non-commercial research purposes.
+
+You may share unmodified copies, and your modifications, with other persons
+solely for those same non-commercial purposes, provided that each copy
+includes this license and all applicable copyright and attribution notices.
+This permission does not authorize Commercial Use.
+
+3. COMMERCIAL USE REQUIRES A SEPARATE LICENSE
+
+You must obtain prior written permission and a separate commercial license
+from the Copyright Holder before engaging in any Commercial Use. Commercial
+license terms, scope, fees, support, and duration must be agreed in writing.
+
+No commercial rights are granted by implication, estoppel, contribution,
+access to the repository, or any other means.
+
+4. RESTRICTIONS
+
+You may not:
+- engage in Commercial Use without a separate written commercial license;
+- sell, sublicense, rent, lease, or commercially redistribute the Software;
+- remove or alter copyright, license, or attribution notices;
+- claim ownership of the Software or misrepresent its origin; or
+- use the Software in a manner that violates applicable law.
+
+5. CONTRIBUTIONS
+
+Contributions remain the copyright of their respective authors. By submitting
+a contribution for inclusion in this repository, the contributor represents
+that they have the right to submit it and grants the Copyright Holder a
+perpetual, worldwide, non-exclusive, royalty-free license to use, reproduce,
+modify, adapt, publish, distribute, and sublicense that contribution as part
+of TSAR, including under this license and under separate commercial licenses.
+No copyright ownership is assigned by this paragraph. Contributions governed
+by a separate written agreement are subject to that agreement.
+
+6. THIRD-PARTY MATERIAL
+
+This license applies only to material for which the Copyright Holder has the
+necessary rights. Third-party components, dependencies, trademarks, and
+materials remain subject to their own licenses and terms. Their inclusion
+does not grant additional rights in those materials.
+
+7. TERMINATION
+
+The permissions granted under this license terminate automatically if you
+materially breach its terms. Upon termination, you must stop the use that
+breaches this license. Sections concerning ownership, restrictions, warranty,
+liability, and third-party rights survive termination as applicable.
+
+8. NO WARRANTY; LIMITATION OF LIABILITY
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+NON-INFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT
+HOLDER SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR ANY LOSS OF DATA, PROFITS,
+REVENUE, OR BUSINESS, ARISING OUT OF OR RELATING TO THE SOFTWARE OR THIS
+LICENSE.
+
+9. PRIOR VERSIONS AND EXISTING LICENSE GRANTS
+
+This license applies to versions and materials first distributed under it by
+the Copyright Holder. It does not revoke or limit rights already granted under
+the MIT License or another license for copies of material previously
+distributed under that license. In particular, recipients of earlier TSAR
+versions distributed under MIT retain the rights granted by that MIT license
+for those copies. This license governs only material that the Copyright
+Holder is legally entitled to distribute under these terms.
+
+10. CONTACT
+
+For commercial licensing, permissions, or other written authorization, contact
+the Copyright Holder through the official TSAR GitHub repository.

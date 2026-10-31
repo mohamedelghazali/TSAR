@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import tempfile
+import uuid
 import urllib.request
 from pathlib import Path
 
@@ -19,6 +20,16 @@ UPSTREAM = {
 ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = ROOT / ".tsar-cache"
 MAX_SOURCE_BYTES = 5 * 1024 * 1024
+
+
+def write_github_outputs(changed: list[str]) -> None:
+    """Expose sync results to later GitHub Actions steps."""
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if not output_path:
+        return
+    with open(output_path, "a", encoding="utf-8") as output:
+        output.write("changed=" + ("true" if changed else "false") + "\n")
+        output.write("changed_sources=" + ",".join(changed) + "\n")
 
 
 def fetch(url: str) -> bytes:
@@ -66,7 +77,7 @@ def commit_cache_atomically(digests: dict[str, str]) -> None:
         raise RuntimeError(f"cache path is not a directory: {CACHE_DIR}")
 
     stage = Path(tempfile.mkdtemp(prefix=f"{CACHE_DIR.name}.stage.", dir=parent))
-    backup = parent / f"{CACHE_DIR.name}.backup.{os.getpid()}.{next(tempfile._get_candidate_names())}"
+    backup = parent / f"{CACHE_DIR.name}.backup.{os.getpid()}.{uuid.uuid4().hex}"
     old_moved = False
     try:
         if CACHE_DIR.is_dir():
@@ -133,11 +144,13 @@ def main() -> int:
         ]
 
         if not changed:
+            write_github_outputs([])
             print("Upstream sources unchanged; cache and manifest were not modified.")
             return 0
 
         print("Upstream changes detected: " + ", ".join(changed))
         commit_cache_atomically(digests)
+        write_github_outputs(changed)
         print(
             "Fingerprint cache updated atomically. Review upstream content and "
             "update TSAR rules manually before merging."
