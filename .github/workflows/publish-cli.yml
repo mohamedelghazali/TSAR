@@ -8,12 +8,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@ec52d0af729a7c50ced4261d17a07916f43f5b8e
         with:
           python-version: '3.12'
       - run: pip install build
       - run: python -m build tools/tsar-cli
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@2442bad8f54b06a326f3030ef5e6a7a674118557
         with:
           packages-dir: tools/tsar-cli/dist/
