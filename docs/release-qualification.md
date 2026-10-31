@@ -9,8 +9,8 @@ free of vulnerabilities.
 
 - Repository: `mohamedelghazali/TSAR`
 - Target branch: `main`
-- Current main commit: `2df15534a40f7f67f67daa33cc9c4034c1642400`
-- Current main tree: `c82943c3ed8f0e366e00d4383a4cc5104c8a9790`
+- Base `main` commit before PR #14: `2df15534a40f7f67f67daa33cc9c4034c1642400`
+- Base tree before PR #14: `c82943c3ed8f0e366e00d4383a4cc5104c8a9790`
 - Latest main change: PR #13, adding copyright-holder contact details to
   `LICENSE`; the commit is GitHub-verified.
 - Repository metadata files currently declare version **1.1.1**:
