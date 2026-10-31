@@ -1,10 +1,26 @@
+resource "aws_security_group" "app" {
+  name        = "tsar-app-${var.environment}"
+  description = "Application workload security group"
+  vpc_id      = aws_vpc.main.id
+
+  egress {
+    description = "Database traffic only"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = var.private_subnet_cidrs
+  }
+
+  tags = { Name = "tsar-app-${var.environment}" }
+}
+
 resource "aws_security_group" "rds" {
   name        = "tsar-rds-${var.environment}"
-  description = "RDS access from app only"
+  description = "RDS access from application workloads only"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "Postgres from app"
+    description     = "Postgres from application security group"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
@@ -12,11 +28,11 @@ resource "aws_security_group" "rds" {
   }
 
   egress {
-    description = "Deny all egress"
+    description = "No outbound destinations"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = []
   }
 
   tags = { Name = "tsar-rds-${var.environment}" }
