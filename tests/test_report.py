@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 REPORT = ROOT / "tools" / "tsar-report" / "generate.py"
 
 def test_html_report(tmp_path):
