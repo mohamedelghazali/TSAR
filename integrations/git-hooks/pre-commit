@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# TSAR pre-commit hook: blocks commit on secrets or HIGH findings.
+set -euo pipefail
+
+TSAR_DIR="${TSAR_DIR:-$(git rev-parse --show-toplevel)/.tsar}"
+if [ ! -d "$TSAR_DIR" ]; then
+  echo "TSAR not installed at $TSAR_DIR; skipping"
+  exit 0
+fi
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$STAGED" ] && exit 0
+
+TMP=$(mktemp -d)
+trap "rm -rf $TMP" EXIT
+
+for f in $STAGED; do
+  mkdir -p "$TMP/$(dirname "$f")"
+  git show ":$f" > "$TMP/$f" 2>/dev/null || true
+done
+
+python "$TSAR_DIR/skills/secret-scanner/scanner.py" "$TMP" || {
+  echo "TSAR: secrets detected; commit blocked."
+  exit 1
+}
+
+python "$TSAR_DIR/skills/secure-review/review.py" "$TMP" || {
+  echo "TSAR: high-severity findings; commit blocked."
+  exit 1
+}
