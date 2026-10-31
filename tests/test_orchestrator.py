@@ -37,7 +37,8 @@ def test_json_output(tmp_path):
     assert isinstance(data["steps"], list)
 
 def test_orchestrator_fails_on_secret(tmp_path):
-    (tmp_path / "bad.py").write_text('K = "AKIAIOSFODNN7EXAMPLE"\n')
+    fake_key = "AKIAIOS" + "FODNN7EXAMPLE"
+    (tmp_path / "bad.py").write_text(f'K = "{fake_key}"\n')
     out = tmp_path / "report.json"
     r = subprocess.run(
         [sys.executable, str(ORCH), str(tmp_path),
