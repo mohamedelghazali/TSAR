@@ -1,6 +1,6 @@
 # Post-Quantum Cryptography (PQC) Readiness
 
-## Threat Model
+## Algorithm Names\n- **ML-KEM** (Module-Lattice Key Encapsulation Mechanism), standardized in FIPS 203; the hybrid TLS profile below uses X25519MLKEM768.\n- **ML-DSA** (Module-Lattice Digital Signature Algorithm), standardized in FIPS 204.\n\n## Threat Model
 "Harvest Now, Decrypt Later" (HNDL): encrypted traffic captured today may be decrypted once a cryptographically relevant quantum computer exists.
 
 ## Mandatory Hybrid Constructions
