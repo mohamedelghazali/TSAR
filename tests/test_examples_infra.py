@@ -8,7 +8,7 @@ TF = ROOT / "examples" / "secure" / "terraform"
 def test_k8s_files_present():
     for name in ["namespace.yaml", "deployment.yaml", "serviceaccount.yaml",
                  "networkpolicy.yaml", "rbac.yaml", "secret.yaml",
-                 "poddisruptionbudget.yaml"]:
+                 "poddisruptionbudget.yaml", "service.yaml", "configmap.yaml"]:
         assert (K8S / name).exists(), f"missing {name}"
 
 def test_k8s_deployment_hardened():
