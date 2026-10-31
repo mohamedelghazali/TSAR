@@ -9,6 +9,9 @@ on:
       - 'rules/secrets/**'
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
