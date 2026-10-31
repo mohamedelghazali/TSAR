@@ -57,6 +57,9 @@ if missing:
 print(f"All {sum(len(v) for v in data['active_files'].values())} active files present")
 PY
 
+step "3b. No empty files"
+check "no_empty_files" python3 scripts/check-no-empty-files.py
+
 step "4. Secret scanner on repository"
 check "secret_scan_repo" python3 skills/secret-scanner/scanner.py .
 
