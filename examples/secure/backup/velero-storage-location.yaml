@@ -1,0 +1,22 @@
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: aws-immutable
+  namespace: velero
+spec:
+  provider: aws
+  objectStorage:
+    bucket: tsar-backups-immutable
+    prefix: prod
+  config:
+    region: eu-west-1
+    serverSideEncryption: aws:kms
+    kmsKeyId: arn:aws:kms:eu-west-1:000000000000:key/00000000-0000-0000-0000-000000000000
+    s3ForcePathStyle: "false"
+    s3BucketLockEnabled: "true"
+    s3ObjectLockMode: COMPLIANCE
+    s3ObjectLockDuration: "365"
+  credential:
+    name: velero-aws-credentials
+    key: cloud
+  accessMode: ReadWrite
