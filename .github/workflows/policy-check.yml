@@ -8,6 +8,9 @@ on:
     paths:
       - 'policies/**'
 
+permissions:
+  contents: read
+
 jobs:
   opa:
     runs-on: ubuntu-latest
