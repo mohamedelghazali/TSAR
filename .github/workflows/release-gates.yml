@@ -9,6 +9,7 @@ on:
       - 'policies/**'
       - 'tools/tsar-lsp/**'
       - '.github/workflows/release-gates.yml'
+      - '.github/workflows/test.yml'
 
 permissions:
   contents: read
