@@ -1,6 +1,6 @@
 # TSAR Instructions for SuperNinja
 
-Fetch the TSAR manifest before any task:
+Fetch the TSAR `manifest.yaml` and load `system/CORE_DIRECTIVE.md` before any task:
 https://raw.githubusercontent.com/mohamedelghazali/TSAR/main/manifest.yaml
 
 Constraints:
