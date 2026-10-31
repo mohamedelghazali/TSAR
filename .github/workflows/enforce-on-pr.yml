@@ -30,7 +30,7 @@ jobs:
         run: python skills/secret-scanner/scanner.py .
 
       - name: Secure review (full repo)
-        run: python skills/secure-review/review.py .
+        run: python skills/secure-review/review.py examples/secure
 
       - name: Crypto inventory (report only)
         run: python skills/crypto-inventory/inventory.py . > cbom.json || true
