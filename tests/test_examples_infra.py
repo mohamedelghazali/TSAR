@@ -62,3 +62,16 @@ def test_k8s_local_app_source_and_configmap_exist():
     assert (K8S / "app" / "Dockerfile").is_file()
     assert (K8S / "app" / "app.py").is_file()
     assert (K8S / "configmap.yaml").is_file()
+
+
+def test_k8s_external_secret_schema_is_vendored():
+    schema = ROOT / "schemas" / "kubernetes" / "external-secrets.io" / "externalsecret_v1beta1.json"
+    assert schema.is_file()
+
+
+def test_k8s_app_uses_tls12_and_nonroot_image_user():
+    app = (K8S / "app" / "app.py").read_text()
+    dockerfile = (K8S / "app" / "Dockerfile").read_text()
+    assert "ssl.TLSVersion.TLSv1_2" in app
+    assert "USER 10001:10001" in dockerfile
+    assert "PYTHONDONTWRITEBYTECODE=1" in dockerfile
