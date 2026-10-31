@@ -1,7 +1,7 @@
 """Verify container security rules and examples."""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 
 def test_container_rules_present():
     for name in ["docker.md", "image-signing.md", "runtime-security.md"]:
