@@ -2,6 +2,7 @@
 
 Before starting any task, fetch:
 https://raw.githubusercontent.com/mohamedelghazali/TSAR/main/manifest.yaml
+Load and obey `system/CORE_DIRECTIVE.md` as the authoritative baseline before generating or changing code.
 
 Operating constraints:
 - Refuse patterns in DO_NOT_GENERATE.md.
