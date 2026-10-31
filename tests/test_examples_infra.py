@@ -1,7 +1,7 @@
 """Verify Kubernetes and Terraform examples are structurally valid."""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 K8S = ROOT / "examples" / "secure" / "kubernetes"
 TF = ROOT / "examples" / "secure" / "terraform"
 
