@@ -60,7 +60,7 @@ def test_unchanged_sources_report_false_without_replacing_cache(tmp_path, monkey
     cache.mkdir()
     digest = hashlib.sha256(b"same").hexdigest()
     for name in ("owasp", "nist"):
-        (cache / f"{name}.sha256").write_text(digest + "\\n", encoding="ascii")
+        (cache / f"{name}.sha256").write_text(digest + "\n", encoding="ascii")
     output = tmp_path / "github-output.txt"
     monkeypatch.setattr(module, "CACHE_DIR", cache)
     monkeypatch.setattr(module, "UPSTREAM", {"owasp": "url-1", "nist": "url-2"})
