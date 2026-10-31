@@ -16,7 +16,7 @@ terraform apply -var="environment=dev"
 
 ## Requirements
 - Remote state in encrypted S3 with DynamoDB lock.
-- AWS provider constrained to exact version 5.40.0; a committed lock file with checksums is still required.
+- AWS provider constrained to exact version 5.40.0 and pinned in the committed multi-platform lock file.
 - Policy-as-code (OPA/Conftest) enforced in CI.
 
 
@@ -32,9 +32,10 @@ terraform providers lock \
   -platform=darwin_arm64
 ```
 
-Commit `.terraform.lock.hcl` after verifying the selected provider version
-and checksums. Do not hand-write or invent checksum entries. Keep the
-`.terraform/` working directory and state files out of version control.
+The repository commits `.terraform.lock.hcl` for Linux AMD64, Windows AMD64,
+and macOS ARM64. CI re-runs provider lock generation and fails if the
+committed file changes. Do not hand-write or invent checksum entries. Keep
+the `.terraform/` working directory and state files out of version control.
 
 The example's CI currently runs initialization with backend disabled and
 validates configuration only. It does not create a cloud plan or apply changes.
