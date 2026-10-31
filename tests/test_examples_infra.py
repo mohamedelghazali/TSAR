@@ -68,4 +68,5 @@ def test_k8s_deployment_marks_image_as_required_release_input():
 def test_infra_workflow_validates_external_secret_with_pinned_schema():
     text = (ROOT / ".github" / "workflows" / "infra-validation.yml").read_text()
     assert "3eb90d47aba8d61919d4419dd38301536e32a94b" in text
+    assert "{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" in text
     assert "-ignore-missing-schemas" not in text
