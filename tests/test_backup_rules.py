@@ -1,6 +1,6 @@
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 
 def test_backup_files_present():
     for name in ["strategy.md", "immutability.md", "air-gap.md", "ransomware-resilience.md"]:
