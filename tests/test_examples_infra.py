@@ -79,5 +79,9 @@ def test_infra_workflow_generates_multi_platform_lockfile():
     assert "-platform=windows_amd64" in text
     assert "-platform=darwin_arm64" in text
     assert "-lockfile=readonly" in text
-    assert "terraform-provider-lockfile" in text
-    assert "include-hidden-files: true" in text
+    assert "git diff --exit-code -- examples/secure/terraform/.terraform.lock.hcl" in text
+    lockfile = TF / ".terraform.lock.hcl"
+    assert lockfile.is_file()
+    lock_text = lockfile.read_text(encoding="utf-8")
+    assert 'version     = "5.40.0"' in lock_text
+    assert len([line for line in lock_text.splitlines() if '"zh:' in line]) >= 10
