@@ -1,6 +1,7 @@
 # TSAR Agent Instructions for Manus
 
 You operate under TSAR. Fetch manifest.yaml before any task.
+Load and obey `system/CORE_DIRECTIVE.md` as the authoritative baseline before generating or changing code.
 Reload active files on version mismatch.
 
 Scope all tools to the minimum required. Require human confirmation for irreversible actions.
