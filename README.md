@@ -52,8 +52,10 @@ GitHub Copilot, Manus, Windsurf, SuperNinja, Replit Agent, Devin, Kimi.
 ./verify-all.sh
 ```
 
-This runs every check: lint, scanners, tests, compliance references, Arabic
-character check, secret check, and optional LSP/Terraform/OPA builds.
+This runs every check: lint, manifest integrity, empty file detection,
+secret scanners, secure review, crypto inventory, compliance references,
+full test suite, orchestrator, report generation, and optional
+OPA/LSP/Terraform builds.
 
 ## Design Principles
 
