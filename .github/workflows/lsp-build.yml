@@ -1,0 +1,19 @@
+name: Build TSAR LSP
+
+on:
+  push:
+    paths:
+      - 'tools/tsar-lsp/**'
+  pull_request:
+    paths:
+      - 'tools/tsar-lsp/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd tools/tsar-lsp && npm install && npm run build
