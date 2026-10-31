@@ -1,0 +1,19 @@
+name: Publish TSAR CLI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install build
+      - run: python -m build tools/tsar-cli
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: tools/tsar-cli/dist/
