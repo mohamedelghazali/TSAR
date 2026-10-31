@@ -16,7 +16,8 @@ def test_cli_scan_clean(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
 
 def test_cli_scan_blocks_secret(tmp_path):
-    (tmp_path / "bad.py").write_text('K = "AKIAIOSFODNN7EXAMPLE"\n')
+    fake_key = "AKIAIOS" + "FODNN7EXAMPLE"
+    (tmp_path / "bad.py").write_text(f'K = "{fake_key}"\n')
     r = run(["scan", str(tmp_path)])
     assert r.returncode != 0
 
