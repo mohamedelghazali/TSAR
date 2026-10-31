@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tsar-app
+  namespace: tsar-example
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["tsar-app-config"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tsar-app
+  namespace: tsar-example
+subjects:
+  - kind: ServiceAccount
+    name: tsar-app
+    namespace: tsar-example
+roleRef:
+  kind: Role
+  name: tsar-app
+  apiGroup: rbac.authorization.k8s.io
