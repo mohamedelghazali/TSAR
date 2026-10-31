@@ -40,3 +40,25 @@ def test_tf_rds_encrypted():
     assert "storage_encrypted" in text
     assert "publicly_accessible" in text
     assert "false" in text
+
+
+def test_tf_security_group_rules_are_separate_and_restricted():
+    text = (TF / "security-groups.tf").read_text()
+    assert "aws_vpc_security_group_egress_rule" in text
+    assert "aws_vpc_security_group_ingress_rule" in text
+    assert "referenced_security_group_id" in text
+    assert "cidr_blocks" not in text
+
+
+def test_k8s_deployment_uses_buildable_local_image_and_configmap():
+    text = (K8S / "deployment.yaml").read_text()
+    assert "tsar-example-app:local" in text
+    assert "0000000000000000000000000000000000000000000000000000000000000000" not in text
+    assert "configMapRef" in text
+    assert "tsar-app-tls" in text
+
+
+def test_k8s_local_app_source_and_configmap_exist():
+    assert (K8S / "app" / "Dockerfile").is_file()
+    assert (K8S / "app" / "app.py").is_file()
+    assert (K8S / "configmap.yaml").is_file()
