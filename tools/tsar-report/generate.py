@@ -158,8 +158,8 @@ def collect(target: str) -> dict:
         },
     }
 
-def generate_html(target: str) -> str:
-    data = collect(target)
+def generate_html(target: str, data: dict | None = None) -> str:
+    data = data if data is not None else collect(target)
     review = data["review"]
     counts = {severity: sum(1 for row in review if row["severity"] == severity)
               for severity in ("HIGH", "MEDIUM", "LOW")}
@@ -199,7 +199,7 @@ def main() -> int:
         "scanner_output": data["scanner_output"],
     }
     if args.format == "html":
-        output = generate_html(args.path)
+        output = generate_html(args.path, data)
     else:
         output = json.dumps(report, indent=2)
     Path(args.output).write_text(output, encoding="utf-8")
