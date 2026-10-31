@@ -1,5 +1,7 @@
 # Cryptographic Anti-Patterns (Hard Stops)
 
+## Hard-stop patterns
+
 | Anti-Pattern | Why It Fails | Replacement |
 |---|---|---|
 | ECB mode | Reveals plaintext patterns | AES-256-GCM |
