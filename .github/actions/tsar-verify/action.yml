@@ -1,0 +1,94 @@
+name: 'TSAR Verify'
+description: 'Run TSAR secret scanner and secure review on a target path.'
+author: 'TSAR'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Path to scan'
+    required: false
+    default: '.'
+  fail_on_secrets:
+    description: 'Fail if any secret is detected'
+    required: false
+    default: 'true'
+  fail_on_high:
+    description: 'Fail if any HIGH severity finding is detected'
+    required: false
+    default: 'true'
+  tsar_ref:
+    description: 'TSAR repository ref (branch, tag, or SHA)'
+    required: false
+    default: 'main'
+  python_version:
+    description: 'Python version'
+    required: false
+    default: '3.12'
+
+outputs:
+  secrets_found:
+    description: 'Number of secrets found'
+    value: ${{ steps.scan.outputs.secrets_found }}
+  high_findings:
+    description: 'Number of HIGH findings'
+    value: ${{ steps.scan.outputs.high_findings }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+
+    - name: Fetch TSAR
+      shell: bash
+      run: |
+        set -euo pipefail
+        git clone --depth 1 --branch "${{ inputs.tsar_ref }}" \
+          https://github.com/mohamedelghazali/TSAR.git "$RUNNER_TEMP/tsar"
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install pyyaml
+
+    - name: Secret scan
+      id: scan
+      shell: bash
+      env:
+        TARGET: ${{ inputs.path }}
+        FAIL_ON_SECRETS: ${{ inputs.fail_on_secrets }}
+        FAIL_ON_HIGH: ${{ inputs.fail_on_high }}
+      run: |
+        set +e
+        python "$RUNNER_TEMP/tsar/skills/secret-scanner/scanner.py" "$TARGET" > "$RUNNER_TEMP/secrets.txt" 2>&1
+        SECRETS_RC=$?
+        SECRETS_COUNT=$(grep -c '^BLOCK:' "$RUNNER_TEMP/secrets.txt" || true)
+        echo "secrets_found=$SECRETS_COUNT" >> "$GITHUB_OUTPUT"
+
+        python "$RUNNER_TEMP/tsar/skills/secure-review/review.py" "$TARGET" > "$RUNNER_TEMP/review.txt" 2>&1
+        REVIEW_RC=$?
+        HIGH_COUNT=$(grep -c '^HIGH:' "$RUNNER_TEMP/review.txt" || true)
+        echo "high_findings=$HIGH_COUNT" >> "$GITHUB_OUTPUT"
+
+        echo "---- Secret scanner output ----"
+        cat "$RUNNER_TEMP/secrets.txt" || true
+        echo "---- Secure review output ----"
+        cat "$RUNNER_TEMP/review.txt" || true
+
+        set -e
+        if [ "$FAIL_ON_SECRETS" = "true" ] && [ "$SECRETS_RC" -ne 0 ]; then
+          echo "::error::Secrets detected; failing."
+          exit 1
+        fi
+        if [ "$FAIL_ON_HIGH" = "true" ] && [ "$REVIEW_RC" -ne 0 ]; then
+          echo "::error::HIGH severity findings detected; failing."
+          exit 1
+        fi
+        if [ "$SECRETS_RC" -ne 0 ] || [ "$REVIEW_RC" -ne 0 ]; then
+          echo "::warning::Findings detected but not failing per configuration."
+        fi
+        exit 0
