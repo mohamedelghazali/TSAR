@@ -39,3 +39,7 @@ require('lspconfig').tsar_lsp.setup({
 ## Rules
 Rules are loaded from `rules.json`. Update it to add or remove checks. The
 server re-reads the file at startup; restart the editor to reload.
+
+## Release verification
+The LSP compiler is also executed as part of the complete `verify-all.sh`
+release gate; a missing or failed build blocks that gate.
