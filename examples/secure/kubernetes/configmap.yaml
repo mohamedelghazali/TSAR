@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tsar-app-config
+  namespace: tsar-example
+data:
+  TSAR_EXAMPLE_MODE: "true"
+  TLS_CERT_FILE: /etc/tls/tls.crt
+  TLS_KEY_FILE: /etc/tls/tls.key
