@@ -17,6 +17,8 @@ def test_init_claude(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     assert (tmp_path / "CLAUDE.md").exists()
     assert (tmp_path / ".tsar" / "manifest.yaml").exists()
+    assert (tmp_path / ".tsar" / "rules" / "crypto" / "algorithms.md").exists()
+    assert (tmp_path / ".tsar" / "system" / "CORE_DIRECTIVE.md").exists()
     assert (tmp_path / ".git" / "hooks" / "pre-commit").exists()
 
 def test_init_cursor(tmp_path):
@@ -45,3 +47,19 @@ def test_init_writes_config(tmp_path):
     cfg = (tmp_path / ".tsar" / "config.json").read_text()
     assert "manifest_version" in cfg
     assert "claude" in cfg
+
+
+def test_init_preserves_existing_custom_hook(tmp_path):
+    hooks = tmp_path / ".git" / "hooks"
+    hooks.mkdir(parents=True)
+    original = "#!/usr/bin/env bash\n echo custom-hook\n"
+    (hooks / "pre-commit").write_text(original)
+    r = run(["init", ".", "--agent", "claude"], cwd=tmp_path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    backups = list(hooks.glob("pre-commit.user-backup.*"))
+    assert len(backups) == 1
+    assert backups[0].read_text() == original
+    wrapper = (hooks / "pre-commit").read_text()
+    assert "TSAR_DIR=" in wrapper
+    assert "pre-commit.user-backup." in wrapper
+    assert (tmp_path / ".tsar" / "pre-commit").exists()
