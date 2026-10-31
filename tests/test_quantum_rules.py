@@ -1,7 +1,7 @@
 """Verify PQC rules reference required algorithms and parameters."""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 
 def test_ml_kem_mentions_768():
     text = (ROOT / "rules" / "quantum" / "ml-kem.md").read_text()
