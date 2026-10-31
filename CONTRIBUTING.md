@@ -99,9 +99,22 @@ test(scope): description
 Every PR must:
 - Pass `pytest tests/`.
 - Pass `python scripts/lint_rules.py`.
-- Pass the orchestrator (`python tools/tsar-orchestrator/orchestrator.py .`).
+- Pass the orchestrator (`python tools/tsar-orchestrator/orchestrator.py examples/secure`).
 - Not introduce secrets (checked by secret-scanner).
 - Not introduce HIGH findings (checked by secure-review).
+
+## Contributor Licensing
+
+By submitting a contribution, you confirm that you have the right to submit it
+and agree to the contribution license grant described in the repository
+`LICENSE`. You retain copyright ownership; no copyright assignment is implied.
+Do not submit third-party material unless its license permits inclusion under
+the project's licensing terms. A separate written agreement controls where one
+exists.
+
+The project uses a custom source-available license. It is not an OSI-approved
+Open Source license. Commercial use requires prior written authorization and a
+separate commercial license. Review `LICENSE` before contributing.
 
 ## Reporting Security Issues
 
