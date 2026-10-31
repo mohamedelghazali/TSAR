@@ -1,7 +1,7 @@
 """Verify cloud rule files exist and contain required controls."""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 CLOUD = ROOT / "rules" / "cloud"
 
 REQUIRED = {
