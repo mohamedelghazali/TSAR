@@ -1,0 +1,10 @@
+[
+  { "name": "sql_injection", "pattern": "(execute|query|raw)\\s*\\(\\s*[f\"'].*(\\+|\\{)", "severity": "error", "message": "Use parameterized queries." },
+  { "name": "eval_usage", "pattern": "\\beval\\s*\\(", "severity": "error", "message": "Remove eval; use a parser." },
+  { "name": "tls_disabled", "pattern": "verify\\s*=\\s*False|rejectUnauthorized\\s*:\\s*false|InsecureSkipVerify\\s*:\\s*true", "severity": "error", "message": "Enable TLS certificate verification." },
+  { "name": "weak_crypto", "pattern": "\\b(MD5|SHA1|DES|RC4|ECB)\\b", "severity": "error", "message": "Use AES-256-GCM and SHA-256+." },
+  { "name": "weak_random", "pattern": "\\b(Math\\.random|random\\.random|rand\\(\\))\\b", "severity": "warning", "message": "Use a CSPRNG for security values." },
+  { "name": "hardcoded_secret", "pattern": "AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}", "severity": "error", "message": "Hardcoded secret detected." },
+  { "name": "innerhtml", "pattern": "\\.innerHTML\\s*=", "severity": "warning", "message": "Use textContent or sanitize with DOMPurify." },
+  { "name": "pickle_load", "pattern": "pickle\\.loads?\\s*\\(", "severity": "error", "message": "Never unpickle untrusted data." }
+]
