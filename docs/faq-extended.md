@@ -10,7 +10,7 @@ No. No system can. TSAR reduces attack surface, improves consistency, and produc
 No. TSAR's scanners are lightweight pre-commit checks. They complement dedicated SAST tools like Semgrep, CodeQL, and SonarQube. Use all three.
 
 ## How does TSAR stay current?
-A GitHub Actions workflow runs daily, fetches upstream standards, bumps the manifest version, and opens a PR for review.
+A GitHub Actions workflow runs daily and records upstream standards fingerprints. It fails closed if a source cannot be fetched, and opens a review PR only when fingerprints change. The workflow does not automatically rewrite TSAR rule text; maintainers must review the upstream material and update rules deliberately.
 
 ## What if an agent ignores TSAR rules?
 The scanner detects violations at commit time. If the agent bypasses the prompt, the pre-commit hook and CI still block the commit. Investigate why the agent did not comply and update the prompt or the enforcement level.
