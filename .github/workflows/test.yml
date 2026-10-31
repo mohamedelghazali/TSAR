@@ -28,3 +28,11 @@ jobs:
         run: |
           python skills/secret-scanner/scanner.py examples/secure
           python skills/secure-review/review.py examples/secure
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Validate Terraform example
+        run: |
+          terraform -chdir=examples/secure/terraform init -backend=false
+          terraform -chdir=examples/secure/terraform validate
