@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: tsar-secret-scan
+        name: TSAR secret scan
+        entry: python skills/secret-scanner/scanner.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: tsar-secure-review
+        name: TSAR secure review
+        entry: python skills/secure-review/review.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: tsar-lint
+        name: TSAR lint rules
+        entry: python scripts/lint_rules.py
+        language: system
+        pass_filenames: false
+        always_run: true
