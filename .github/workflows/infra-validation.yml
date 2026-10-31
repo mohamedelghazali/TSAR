@@ -31,5 +31,9 @@ jobs:
         run: |
           curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
           sudo mv kubeconform /usr/local/bin/
-      # kubeconform skips custom resources without published schemas; validate built-in Kubernetes objects here.
-      - run: kubeconform -strict -ignore-missing-schemas -summary examples/secure/kubernetes/
+      # ExternalSecret schema is pinned to an immutable CRDs-catalog commit.
+      - run: >-
+          kubeconform -strict -summary
+          -schema-location default
+          -schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/3eb90d47aba8d61919d4419dd38301536e32a94b/{group}/{kind}_{version}.json
+          examples/secure/kubernetes/
