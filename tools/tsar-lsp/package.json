@@ -1,0 +1,19 @@
+{
+  "name": "tsar-lsp",
+  "version": "1.0.0",
+  "description": "TSAR language server",
+  "main": "out/server.js",
+  "bin": { "tsar-lsp": "out/server.js" },
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -w -p ."
+  },
+  "dependencies": {
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}
