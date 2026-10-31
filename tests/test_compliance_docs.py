@@ -2,7 +2,7 @@
 import re
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 COMPLIANCE = ROOT / "docs" / "compliance"
 
 FRAMEWORKS = ["soc2.md", "iso27001.md", "pci-dss.md", "hipaa.md", "gdpr.md"]
