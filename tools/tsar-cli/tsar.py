@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -22,9 +23,16 @@ def cmd_scan(args) -> int:
         import importlib
         review_mod = importlib.import_module("review")
         findings = review_mod.review(Path(args.path))
+        sys.path.insert(0, str(SKILLS / "secret-scanner"))
+        secret_mod = importlib.import_module("scanner")
+        findings.extend(
+            (path, line, kind, "HIGH", "Potential secret or credential detected.")
+            for path, line, kind in secret_mod.scan(Path(args.path))
+        )
         sys.path.insert(0, str(TOOLS / "tsar-cli"))
         import sarif as sarif_mod
         out = Path(args.output or "tsar.sarif")
+        out.parent.mkdir(parents=True, exist_ok=True)
         sarif_mod.emit(findings, out)
         print(f"SARIF written to {out}")
         return 1 if any(f[3] == "HIGH" for f in findings) else 0
@@ -110,62 +118,74 @@ def cmd_drift(args) -> int:
     return 1
 
 def cmd_init(args) -> int:
+    import yaml
+
     target = Path(args.path).resolve()
-    if not target.exists():
-        print(f"Target does not exist: {target}")
+    if not target.is_dir():
+        print(f"Target directory does not exist: {target}", file=sys.stderr)
         return 2
-    valid = {"claude", "claude-code", "cursor", "copilot",
-             "windsurf", "windsurf-rc", "generic"}
-    if args.agent not in valid:
-        print(f"Unknown agent: {args.agent}")
+    prompt_map = {
+        "claude": ("claude.md", "CLAUDE.md"),
+        "claude-code": ("claude-code.md", "CLAUDE.md"),
+        "cursor": ("cursor.md", ".cursorrules"),
+        "copilot": ("github-copilot.md", ".github/copilot-instructions.md"),
+        "windsurf": ("windsurf.md", ".windsurfrules"),
+        "windsurf-rc": ("windsurf.md", ".windsurfrules"),
+        "generic": ("universal.md", "AGENTS.md"),
+    }
+    if args.agent not in prompt_map:
+        print(f"Unknown agent: {args.agent}", file=sys.stderr)
         return 2
-    prompt_src = {
-        "claude": ROOT / "prompts" / "claude.md",
-        "claude-code": ROOT / "prompts" / "claude-code.md",
-        "cursor": ROOT / "prompts" / "cursor.md",
-        "copilot": ROOT / "prompts" / "github-copilot.md",
-        "windsurf": ROOT / "prompts" / "windsurf.md",
-        "windsurf-rc": ROOT / "prompts" / "windsurf.md",
-        "generic": ROOT / "prompts" / "universal.md",
-    }[args.agent]
-    dest = {
-        "claude": target / "CLAUDE.md",
-        "claude-code": target / "CLAUDE.md",
-        "cursor": target / ".cursorrules",
-        "copilot": target / ".github" / "copilot-instructions.md",
-        "windsurf": target / ".windsurfrules",
-        "windsurf-rc": target / ".windsurfrules",
-        "generic": target / "AGENTS.md",
-    }[args.agent]
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(prompt_src, dest)
-    print(f"Prompt written to {dest}")
+    prompt_name, destination_name = prompt_map[args.agent]
+    prompt_source = ROOT / "prompts" / prompt_name
+    destination = target / destination_name
+    if not prompt_source.is_file():
+        print(f"Prompt not found: {prompt_source}", file=sys.stderr)
+        return 2
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(prompt_source, destination)
 
     tsar_dir = target / ".tsar"
-    tsar_dir.mkdir(exist_ok=True)
-    shutil.copytree(SKILLS, tsar_dir / "skills", dirs_exist_ok=True)
-    shutil.copytree(SCRIPTS, tsar_dir / "scripts", dirs_exist_ok=True)
+    tsar_dir.mkdir(parents=True, exist_ok=True)
+    for source_name in ("skills", "scripts", "rules", "system"):
+        shutil.copytree(ROOT / source_name, tsar_dir / source_name, dirs_exist_ok=True)
     shutil.copytree(TOOLS / "tsar-report", tsar_dir / "tsar-report", dirs_exist_ok=True)
-    shutil.copyfile(ROOT / "manifest.yaml", tsar_dir / "manifest.yaml")
-    print(f"TSAR vendored at {tsar_dir}")
-
-    hooks = target / ".git" / "hooks"
-    if hooks.exists():
-        hook_dst = hooks / "pre-commit"
-        hook_src = ROOT / "integrations" / "git-hooks" / "pre-commit"
-        if not hook_dst.exists() or "TSAR" not in hook_dst.read_text():
-            shutil.copyfile(hook_src, hook_dst)
-            hook_dst.chmod(0o755)
-            print(f"Pre-commit hook installed at {hook_dst}")
-
+    shutil.copy2(ROOT / "manifest.yaml", tsar_dir / "manifest.yaml")
+    manifest = yaml.safe_load((ROOT / "manifest.yaml").read_text(encoding="utf-8")) or {}
+    version = str(manifest.get("version", "unknown"))
     (tsar_dir / "config.json").write_text(json.dumps({
-        "manifest_version": "1.0.0",
-        "agent": args.agent,
-        "vendored": True,
-    }, indent=2))
-    print("TSAR init complete")
-    return 0
+        "manifest_version": version, "agent": args.agent, "vendored": True,
+    }, indent=2) + "\n", encoding="utf-8")
 
+    hook_source = ROOT / "integrations" / "git-hooks" / "pre-commit"
+    tsar_hook = tsar_dir / "pre-commit"
+    if hook_source.is_file():
+        shutil.copy2(hook_source, tsar_hook)
+        tsar_hook.chmod(0o755)
+    hooks_dir = target / ".git" / "hooks"
+    if hooks_dir.is_dir() and hook_source.is_file():
+        hook_destination = hooks_dir / "pre-commit"
+        if not hook_destination.exists():
+            shutil.copy2(hook_source, hook_destination)
+            hook_destination.chmod(0o755)
+        else:
+            existing = hook_destination.read_text(encoding="utf-8", errors="replace")
+            if "TSAR" not in existing:
+                backup_name = f"pre-commit.user-backup.{time.time_ns()}"
+                backup_path = hooks_dir / backup_name
+                shutil.copy2(hook_destination, backup_path)
+                wrapper = (
+                    "#!/usr/bin/env bash\nset -euo pipefail\n"
+                    + 'HOOK_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"\n'
+                    + f'"$HOOK_DIR/{backup_name}" "$@"\n'
+                    + f'TSAR_DIR="{tsar_dir}" "$TSAR_DIR/pre-commit" "$@"\n'
+                )
+                hook_destination.write_text(wrapper, encoding="utf-8")
+                hook_destination.chmod(0o755)
+            else:
+                print("Existing pre-commit hook already contains TSAR; left unchanged.")
+    print(f"TSAR vendored at {tsar_dir}; manifest version {version}")
+    return 0
 def main() -> int:
     p = argparse.ArgumentParser(prog="tsar", description="TSAR security CLI")
     sub = p.add_subparsers(dest="command", required=True)
