@@ -18,6 +18,8 @@ PATTERNS = {
 }
 SKIP_DIRS = {".git", "node_modules", "vendor", "dist", "build", ".venv", "__pycache__"}
 URL_RE = re.compile(r"https?://\S+", re.IGNORECASE)
+DUMMY_AWS_TEST_VALUE = "AKIAIOS" + "FODNN7EXAMPLE"
+DUMMY_PEM_HEADER = "-----BEGIN " + "PRIVATE KEY-----"
 TOKEN_RE = re.compile(r"[A-Za-z0-9+/=_-]{32,}")
 SECRET_CONTEXT_RE = re.compile(r"(?i)(secret|token|api[_-]?key|password|credential|authorization)\s*[:=]")
 
