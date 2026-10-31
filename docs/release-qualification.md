@@ -1,50 +1,63 @@
 # TSAR Release Qualification
 
-This document records the evidence required before creating a stable release. A successful static check is not equivalent to a cloud deployment or production readiness.
+This document records the evidence required before creating a stable release. Passing static checks is not equivalent to a cloud deployment or production readiness.
 
-## Current hardening branch
+## Repository state — 2026-10-31
 
 - Target branch: `main`
-- Working branch: `release/stable-hardening-v2`
-- Review: [Pull Request #3](https://github.com/mohamedelghazali/TSAR/pull/3)
-- Stable release tag: not created
-- Merge to `main`: not authorized by this work
+- Current main commit: `79703ffe089d5b8124944895f128034b14b33f6a`
+- Release-hardening PR: [#3 — Release hardening v2](https://github.com/mohamedelghazali/TSAR/pull/3)
+- PR #3: merged; merge commit is the current main commit above.
+- This qualification document is being updated separately; no deployment or release tag is created by this update.
+
+## CI evidence on current main
+
+The following GitHub Actions runs completed successfully for the current main commit:
+
+| Workflow | Result | Evidence |
+|---|---|---|
+| TSAR Self-Test | 183 passed, 2 skipped | [Run 41223591256](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591256) |
+| Infrastructure Validation — Terraform | fmt, init, provider lock verification, validate passed | [Run 41223591167](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591167) |
+| Infrastructure Validation — Kubernetes | 10 resources valid; 0 invalid, errors, or skipped | [Run 41223591167](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591167) |
+| TSAR Orchestrator | 4 steps passed | [Run 41223591136](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591136) |
+| TSAR Validate Rules | Manifest valid; secret scanner found no secrets | [Run 41223591133](https://github.com/mohamedelghazali/TSAR/actions/runs/41223591133) |
+
+The merged PR #3 also had successful PR-triggered runs for the full pytest suite, rule validation, orchestrator, PR enforcement, domain-specific tests, compliance references, Terraform validation, and strict Kubernetes schema validation.
+
+### Scope and limits of the current CI
+
+- Terraform CI runs formatting, backend-disabled initialization, provider lock verification, and configuration validation. It does **not** run a cloud-backed plan or apply.
+- Kubernetes CI validates schemas only. It does **not** contact a target cluster or prove that AWS resources, the External Secrets Operator, referenced secrets, certificates, image, IAM role, ingress, DNS, or network routes exist.
+- The repository's `verify-all.sh` is broader than the current `test.yml` workflow. The latest main CI evidence above does not establish that every optional check in `verify-all.sh` ran.
+- The policy-specific OPA workflow and LSP build workflow are path-filtered; their absence from the latest main push run list is not evidence that they ran on this commit.
+- Branch protection / ruleset enforcement could not be verified through the available GitHub integration. Confirm required status checks and review requirements in repository Settings before relying on them.
 
 ## Qualification matrix
 
-| Area | Implemented in this branch | Release evidence still required |
+| Area | Verified | Still required |
 |---|---|---|
-| CLI initialization | Staged installation, previous-tree backup, rollback path, preservation of top-level custom entries and existing agent instructions/hooks | CI must execute the success, refresh, custom-data, and simulated-promotion-failure tests |
-| Standards sync | Fetch-all-before-write, fail-closed behavior, staged cache replacement, GitHub Actions outputs, no-op gating, tracked fingerprint cache | CI must execute failure/no-change/change tests; maintainers must review upstream source changes and update rule text deliberately |
-| Terraform | Exact AWS provider version constraint; app-to-RDS traffic scoped by security-group reference | A multi-platform `.terraform.lock.hcl` is now committed and checked by CI; run fmt/init/validate; review a plan with authorized AWS credentials |
-| Kubernetes | External TLS Secret provisioning, pinned ExternalSecret schema, explicit image and IRSA placeholders, deployment prerequisites documented | Replace placeholders with a verified immutable application image digest and actual IRSA role ARN; validate against the target cluster and External Secrets Operator |
-| GitHub Actions | External actions pinned to full commit SHAs; explicit token permissions; checkout credentials not persisted; OPA and kubeconform downloads pinned and checksum-verified | All PR workflow runs must complete successfully; review any remaining third-party downloads and package installation steps |
-| Governance | Contribution command corrected; custom source-available license and contribution terms documented; previous MIT grants expressly preserved | Obtain legal review before distributing a release under the new license |
-| Verification | Full verification no longer installs Python packages as a side effect | Run `python3 -m pip install -r requirements-dev.txt`, then `./verify-all.sh`; record tool skips and failures |
-
-
-## CI snapshot — 2026-10-31
-
-At branch head `f6c54e2a8bf43a9651ef440f9b9b8198640de9a6`, the latest pull-request workflow set completed successfully:
-
-- TSAR Self-Test, including the full pytest suite.
-- TSAR Validate Rules and TSAR Orchestrator.
-- TSAR Enforce on PR, including secret scanning and secure-example review.
-- Infrastructure Validation: Terraform format, readonly initialization, multi-platform provider lock verification, unchanged-lock check, and validation; Kubernetes strict kubeconform validation with the pinned ExternalSecret schema.
-- Domain-specific test workflows for backup/DR/legal hold, email/endpoint/identity, messaging/database, privacy/threat-intelligence/forensics, and compliance references.
-
-The PR remains a draft and `main` remains at its original base commit. Passing CI does not mean a cloud plan or live Kubernetes deployment has been performed.
+| Core tests | Current main: 183 passed, 2 skipped | Review the two skips and run the complete release verification script |
+| Rule and manifest integrity | Current main workflow passed | Continue checking rule coverage and upstream source changes |
+| Secret scanning | Current main repository scan passed | Maintain scanning on every proposed change and review scanner limitations |
+| Orchestrator | Current main: 4 steps passed | Review generated reports and ensure each production integration is exercised |
+| Terraform | Format, init, lock file and validate passed | Review a plan using authorized AWS credentials; do not apply without approval |
+| Kubernetes | Strict schema validation passed for all 10 resources | Supply a verified immutable image digest and real IRSA role ARN; validate against the target cluster |
+| External secrets and TLS | ExternalSecret schemas validated | Provision the operator, ClusterSecretStore, AWS secret entries and matching TLS certificate/key outside Git |
+| GitHub Actions | External actions are pinned to full commit SHAs; workflows declare explicit permissions and disable persisted checkout credentials | Confirm required checks and branch protection/rulesets in repository settings; exercise path-filtered workflows |
+| Governance | Custom source-available terms and prior MIT grant treatment are documented | Obtain legal review before commercial distribution or a stable release |
 
 ## Mandatory release gates
 
-1. All required GitHub Actions checks for the release PR pass.
-2. The full test suite passes, including the new CLI rollback, sync, infrastructure, workflow-pinning, and license tests.
-3. A provider lock file is generated from the official Terraform registry, reviewed, committed, and verified on the platforms the project supports. Do not fabricate provider checksums.
-4. Terraform formatting, initialization, and validation pass. A plan must be reviewed before any deployment. No apply is performed by this qualification process.
-5. The Kubernetes image digest and IAM role ARN are replaced with real, reviewed deployment values. External Secrets Operator, ClusterSecretStore, AWS secrets, TLS certificate, ingress, DNS, and network routes are provisioned and validated in the target environment.
-6. The custom license receives legal review. Previously distributed MIT copies remain governed by the MIT license grants already made; this repository change does not revoke those rights.
-7. A maintainer explicitly approves the final PR and release version. Only then should a signed release tag and release notes be created.
+1. Run `python3 -m pip install -r requirements-dev.txt` and then `./verify-all.sh` in a clean environment. Record every PASS, FAIL, and SKIP; do not describe skipped checks as passed.
+2. Review the two skipped pytest tests and determine whether they are expected for the release environment.
+3. Confirm that OPA policy compilation/tests and the LSP build pass for the release candidate, even if their path-filtered workflows did not run on the latest main push.
+4. Confirm repository branch protection or rulesets require the intended status checks and review approvals.
+5. Review a Terraform plan with authorized AWS credentials and the intended target account/region. No apply is implied by this qualification process.
+6. Replace the Kubernetes image placeholder with a built, scanned, published and verified immutable SHA-256 digest. Replace the IRSA placeholder with the actual role ARN and validate the trust relationship.
+7. Provision and verify the External Secrets Operator, ClusterSecretStore, AWS Secrets Manager entries, matching TLS certificate/key, ingress, DNS, and required network routes in the target environment.
+8. Obtain legal review of the custom source-available license. Previously distributed MIT copies remain governed by their existing MIT grants.
+9. Obtain explicit maintainer approval before creating a signed stable release tag and publishing release artifacts.
 
-## Known execution boundaries
+## Execution boundaries
 
-No AWS credentials or target Kubernetes cluster are assumed. Therefore, no Terraform plan/apply, AWS deployment, Kubernetes apply, live TLS validation, or production readiness claim is made here. CI results must be read from the actual GitHub Actions runs; the presence of a workflow or test file is not proof that it passed.
+No AWS credentials or target Kubernetes cluster are assumed. Therefore, no Terraform plan/apply, AWS deployment, Kubernetes apply, live TLS validation, or production-readiness claim is made here. CI results must be read from the actual GitHub Actions runs; the presence of a workflow or test file is not proof that it passed.
