@@ -1,8 +1,12 @@
-# TSAR — Security Governance Layer for AI-Generated Code
+# 🛡️ TSAR — The Ultimate Security Governance Layer for AI Coding Agents
 
-TSAR is an enforceable security policy repository injected into AI coding agents.
-It provides mandatory rules, platform baselines, cryptographic standards, and
-agentic-AI controls, with upstream fingerprint monitoring and deliberately reviewed rule updates.
+> **Stop vulnerabilities at the source. Secure every line of AI-generated code.**
+
+TSAR is an AI security governance layer designed to help prevent vulnerabilities before they enter your codebase. It enforces **170+ strict security rules** spanning **Cryptography, Cloud Security, and OWASP** across Claude, Gemini, GPT-4, Kimi, Cursor, GitHub Copilot, and **15+ AI coding agents**.
+
+Built for security-conscious AI-assisted development, TSAR brings security policy closer to the point where code is generated—so teams can govern how AI coding agents produce and modify software, rather than relying only on downstream detection.
+
+**Security-first AI development. Governed at the source.**
 
 **Repository version:** 1.1.1 (see `VERSION`, `manifest.yaml`, and
 `tools/tsar-cli/pyproject.toml`). The v2.0 roadmap is proposed work, not the
