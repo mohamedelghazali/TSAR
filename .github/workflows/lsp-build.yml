@@ -18,5 +18,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '20'
-      - run: cd tools/tsar-lsp && npm ci && npm run build
+          node-version: '24'
+      - name: Generate deterministic dependency lockfile
+        run: cd tools/tsar-lsp && npm install --package-lock-only --ignore-scripts
+      - name: Install locked dependencies and build
+        run: cd tools/tsar-lsp && npm ci && npm run build
+      - name: Upload generated npm lockfile
+        uses: actions/upload-artifact@c2acdedd35a8824a1552c7137f8c18288c3ea469
+        with:
+          name: tsar-lsp-package-lock
+          path: tools/tsar-lsp/package-lock.json
+          if-no-files-found: error
