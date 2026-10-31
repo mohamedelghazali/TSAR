@@ -25,21 +25,14 @@ jobs:
         with:
           terraform_version: '1.6.1'
       - run: terraform -chdir=examples/secure/terraform fmt -check
-      - run: terraform -chdir=examples/secure/terraform init -backend=false
+      - run: terraform -chdir=examples/secure/terraform init -backend=false -lockfile=readonly
       - run: >-
           terraform -chdir=examples/secure/terraform providers lock
           -platform=linux_amd64
           -platform=windows_amd64
           -platform=darwin_arm64
-      - run: terraform -chdir=examples/secure/terraform init -backend=false -lockfile=readonly
+      - run: git diff --exit-code -- examples/secure/terraform/.terraform.lock.hcl
       - run: terraform -chdir=examples/secure/terraform validate
-      - name: Upload verified provider lock file
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: terraform-provider-lockfile
-          path: examples/secure/terraform/.terraform.lock.hcl
-          if-no-files-found: error
-          include-hidden-files: true
 
   kubernetes:
     runs-on: ubuntu-latest
