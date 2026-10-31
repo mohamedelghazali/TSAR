@@ -24,8 +24,8 @@ spec:
           type: RuntimeDefault
       containers:
         - name: app
-          image: registry.example.com/tsar-app@sha256:0000000000000000000000000000000000000000000000000000000000000000
-          imagePullPolicy: IfNotPresent
+          image: tsar-example-app:local
+          imagePullPolicy: Never
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -44,11 +44,9 @@ spec:
               cpu: 500m
               memory: 512Mi
           envFrom:
-            - secretRef:
-                name: tsar-app-secrets
+            - configMapRef:
+                name: tsar-app-config
           volumeMounts:
-            - name: tmp
-              mountPath: /tmp
             - name: tls
               mountPath: /etc/tls
               readOnly: true
@@ -63,8 +61,6 @@ spec:
               port: https
               scheme: HTTPS
       volumes:
-        - name: tmp
-          emptyDir: {}
         - name: tls
           secret:
             secretName: tsar-app-tls
