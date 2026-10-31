@@ -5,14 +5,15 @@ This document records evidence for the stable-release decision. Passing CI check
 ## Repository state — 2026-10-31
 
 - Target branch: `main`
-- Current main commit: `49a9c5ad4e623994b133f35cf6abe15387fb61a5`
+- Verified implementation tree baseline: `49a9c5ad4e623994b133f35cf6abe15387fb61a5` (the source tree validated by the full release gate).
 - Release verification changes: [PR #7](https://github.com/mohamedelghazali/TSAR/pull/7), merged.
+- Qualification evidence refresh: [PR #8](https://github.com/mohamedelghazali/TSAR/pull/8), merged.
 - PR #7 changed OPA policies, CI workflows, and LSP documentation; it did not change the Terraform or Kubernetes deployment manifests.
 - No stable release tag or GitHub Release was created.
 
 ## CI evidence
 
-### Current main commit
+### Post-merge checks on main
 
 | Workflow | Result | Evidence |
 |---|---|---|
