@@ -102,3 +102,37 @@ def test_init_refresh_is_repeatable(tmp_path):
     assert (tmp_path / ".tsar" / "config.json").read_text() != first_config
     assert (tmp_path / "CLAUDE.md").exists()
     assert not (tmp_path / ".cursorrules").exists() or (tmp_path / ".cursorrules").is_file()
+
+
+def test_atomic_directory_swap_restores_previous_tree_on_promotion_failure(tmp_path, monkeypatch):
+    import importlib.util
+    import pytest
+
+    cli_path = ROOT / "tools" / "tsar-cli" / "tsar.py"
+    spec = importlib.util.spec_from_file_location("tsar_cli_atomic_test", cli_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    destination = tmp_path / ".tsar"
+    destination.mkdir()
+    (destination / "old.txt").write_text("previous")
+    staged = tmp_path / ".tsar-stage"
+    staged.mkdir()
+    (staged / "new.txt").write_text("next")
+    backup = tmp_path / ".tsar.backup"
+
+    real_replace = module.os.replace
+
+    def fail_promotion(source, target):
+        if Path(source) == staged and Path(target) == destination:
+            raise OSError("simulated promotion failure")
+        return real_replace(source, target)
+
+    monkeypatch.setattr(module.os, "replace", fail_promotion)
+    with pytest.raises(OSError, match="simulated promotion failure"):
+        module._atomic_replace_directory(staged, destination, backup)
+
+    assert (destination / "old.txt").read_text() == "previous"
+    assert not (destination / "new.txt").exists()
+    assert staged.exists()
+    assert not backup.exists()
