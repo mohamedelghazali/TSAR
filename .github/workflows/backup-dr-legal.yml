@@ -1,0 +1,20 @@
+name: Backup, DR, Legal Hold Rules
+
+on:
+  push:
+    paths:
+      - 'rules/backup/**'
+      - 'rules/disaster-recovery/**'
+      - 'rules/legal-hold/**'
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest pyyaml
+      - run: pytest tests/test_backup_rules.py tests/test_dr_rules.py tests/test_legal_hold_rules.py tests/test_backup_examples.py tests/test_cli_extensions.py -v
