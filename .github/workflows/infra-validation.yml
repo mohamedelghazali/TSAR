@@ -45,5 +45,5 @@ jobs:
       - run: >-
           kubeconform -strict -summary
           -schema-location default
-          -schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/3eb90d47aba8d61919d4419dd38301536e32a94b/{group}/{kind}_{version}.json
+          -schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/3eb90d47aba8d61919d4419dd38301536e32a94b/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
           examples/secure/kubernetes/
