@@ -19,8 +19,8 @@ jobs:
       - name: Install OPA
         run: |
           set -euo pipefail
-          OPA_VERSION="v1.21.4"
-          OPA_BINARY="opa_linux_amd64_static"
+          OPA_VERSION="v1.22.0"
+          OPA_BINARY="opa_linux_amd64"
           OPA_URL="https://github.com/open-policy-agent/opa/releases/download/$OPA_VERSION"
           curl -fsSLo "$OPA_BINARY" "$OPA_URL/$OPA_BINARY"
           curl -fsSLo "$OPA_BINARY.sha256" "$OPA_URL/$OPA_BINARY.sha256"
