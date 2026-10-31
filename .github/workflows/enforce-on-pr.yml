@@ -4,22 +4,40 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   enforce:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Secure review on changed code
-        run: |
-          python skills/secure-review/review.py . || {
-            echo "Secure review failed; PR blocked."
-            exit 1
-          }
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: Secret scan
-        run: |
-          python skills/secret-scanner/scanner.py . || {
-            echo "Secrets detected; PR blocked."
-            exit 1
-          }
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Lint TSAR rules
+        run: python scripts/lint_rules.py
+
+      - name: Secret scan (full repo)
+        run: python skills/secret-scanner/scanner.py .
+
+      - name: Secure review (full repo)
+        run: python skills/secure-review/review.py .
+
+      - name: Crypto inventory (report only)
+        run: python skills/crypto-inventory/inventory.py . > cbom.json || true
+
+      - name: Upload CBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbom
+          path: cbom.json
