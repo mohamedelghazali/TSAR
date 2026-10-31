@@ -28,7 +28,9 @@ jobs:
         with:
           terraform_version: '1.6.1'
       - name: Format Terraform
-        run: terraform -chdir=examples/secure/terraform fmt -check
+        run: |
+          terraform -chdir=examples/secure/terraform fmt -recursive
+          terraform -chdir=examples/secure/terraform fmt -check
       - name: Generate provider lock checksums
         run: |
           terraform -chdir=examples/secure/terraform providers lock \
@@ -65,5 +67,5 @@ jobs:
         run: |
           kubeconform -strict -summary \
             -schema-location default \
-            -schema-location 'file://schemas/kubernetes/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -schema-location "file://$GITHUB_WORKSPACE/schemas/kubernetes/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" \
             examples/secure/kubernetes/
