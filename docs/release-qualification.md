@@ -1,12 +1,13 @@
 # TSAR Release Qualification
 
-This document records repository evidence and owner decisions for the current 1.1.1 release line. It distinguishes automated repository checks from external approvals and deployment validation.
+This document records repository evidence and owner decisions for the v1.1.1 release. It distinguishes automated repository checks from external approvals and deployment validation.
 
 ## Repository Snapshot
 
 - Repository: mohamedelghazali/TSAR
 - Default branch: main
-- Main commit reviewed: 06fdc76c4df4fcfce558d0ed4b39bd6397d3abf7
+- Qualified main commit: 61dce3e6d46dd25dfc0ad05617329d7ba89d43a5
+- Qualified tree: a4ba503222ceed395bdb81f48b43ebb313bbeffd
 - Snapshot reviewed: 2026-10-31
 - Repository visibility: public
 - Repository description: aligned with the AI security governance identity.
@@ -28,17 +29,15 @@ The rule-file count is an inventory measure. It does not mean that every individ
 
 ## CI Evidence
 
-The complete release gate passed on main commit 06fdc76c4df4fcfce558d0ed4b39bd6397d3abf7:
+The complete release gate passed on qualified main commit 61dce3e6d46dd25dfc0ad05617329d7ba89d43a5:
 
-- [TSAR Complete Release Gates — 41241714329](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714329) — success; complete verify-all.sh suite.
-- [TSAR Self-Test — 41241714325](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714325) — success.
-- [Infrastructure Validation — 41241714482](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714482) — success.
-- [TSAR Validate Rules — 41241714327](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714327) — success.
-- [TSAR Orchestrator — 41241714307](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714307) — success.
-
+- [TSAR Complete Release Gates — 41242004036](https://github.com/mohamedelghazali/TSAR/actions/runs/41242004036) — success; complete verify-all.sh suite.
+- [TSAR Self-Test — 41242003931](https://github.com/mohamedelghazali/TSAR/actions/runs/41242003931) — success.
+- [Infrastructure Validation — 41242003985](https://github.com/mohamedelghazali/TSAR/actions/runs/41242003985) — success.
+ 
 The complete verification log reports **186 pytest tests passed**, successful rule linting, compliance-reference checks, secret scanning with no secrets found, orchestrator and report generation, OPA policy checks, LSP build, and Terraform validation. The separate infrastructure workflow also passed Terraform static validation and Kubernetes schema validation.
 
-The release-gates workflow now runs on every pull request to main, every push to main, and manual dispatch. This prevents a path filter from silently omitting the full release gate on documentation-only or other changes.
+The release-gates workflow runs on every pull request to main, every push to main, and manual dispatch. This prevents a path filter from silently omitting the full release gate on documentation-only or other changes.
 
 ## Agent Integration and Enforcement Scope
 
@@ -65,18 +64,22 @@ The ruleset currently requires **zero approving reviews**. PR-based changes are 
 - **License review:** the project owner confirms that the license was reviewed with an advisor and approved. This record reflects that owner confirmation; it is not an independent legal opinion.
 - The repository retains its custom source-available license. It is not an OSI-approved Open Source license. Commercial use remains subject to the written authorization and commercial licensing terms in LICENSE.
 
-## Version and Release
+## Published Version and Release
 
 - Current declared version: **1.1.1**.
-- No Git tags or GitHub Releases were present in the reviewed repository.
-- The v2.0 roadmap is proposed work, not the current implementation.
-- Do not publish v2.0.0 from the current 1.1.1 codebase.
-- The repository is technically qualified for a **v1.1.1** release, subject to a final check that the release tag points to the exact tested main tree and that the release notes match CHANGELOG.md.
+- Git tag: **v1.1.1** — published and resolves to qualified commit 61dce3e6d46dd25dfc0ad05617329d7ba89d43a5.
+- GitHub Release: [TSAR v1.1.1 — Stable Release](https://github.com/mohamedelghazali/TSAR/releases/tag/v1.1.1).
+- Release status: published; not a draft and not marked as a pre-release.
+- Published at: 2026-10-31 21:22:51 UTC.
+- The release currently has no separately attached binary assets. GitHub provides the source archives for the tag.
+- The v2.0 roadmap is proposed work, not the current implementation. Do not publish v2.0.0 from the current 1.1.1 codebase.
+
+The published tag was checked against the qualified commit. The release tag and the tested main tree therefore identify the same source snapshot.
 
 ## Qualification Decision
 
-**Repository qualification: PASS for the 1.1.1 release line.**
+**Repository qualification: PASS for the published v1.1.1 release.**
 
-The inventory is consistent, the complete release gate passed, the required CI workflows passed, one main-branch ruleset is active, and the project owner has confirmed the AWS and license workstreams as complete.
+The inventory is consistent, the complete release gate passed, the required CI workflows passed, the main-branch ruleset is active, the project owner has confirmed the AWS and license workstreams as complete, and the stable v1.1.1 tag and GitHub Release are published.
 
 This qualification does not certify the absence of vulnerabilities, provider prompt compliance, regulatory compliance, or live cloud deployment behavior.
