@@ -1,0 +1,26 @@
+; SPF record - only listed senders, hard fail
+example.com.            IN TXT "v=spf1 include:_spf.provider.example -all"
+
+; DMARC - reject, strict alignment, aggregate + forensic reporting
+_dmarc.example.com.     IN TXT "v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s; pct=100; rua=mailto:dmarc-aggregate@example.com; ruf=mailto:dmarc-forensic@example.com; fo=1"
+
+; DKIM - 2048-bit RSA
+selector1._domainkey.example.com. IN TXT "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA..."
+selector2._domainkey.example.com. IN TXT "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA..."
+
+; MTA-STS
+_mta-sts.example.com.   IN TXT "v=STSv1; id=20261031T000000Z"
+; .well-known/mta-sts.txt:
+; version: STSv1
+; mode: enforce
+; mx: mx1.example.com
+; mx: mx2.example.com
+; max_age: 604800
+
+; TLS-RPT
+_smtp._tls.example.com. IN TXT "v=TLSRPTv1; rua=mailto:tls-reports@example.com"
+
+; CAA - restrict certificate issuance
+example.com.            IN CAA 0 issue "letsencrypt.org"
+example.com.            IN CAA 0 issuewild ";"
+example.com.            IN CAA 0 iodef "mailto:security@example.com"
