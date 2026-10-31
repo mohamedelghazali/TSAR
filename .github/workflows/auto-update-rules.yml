@@ -1,0 +1,48 @@
+name: TSAR Auto-Update Rules
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate existing rules
+        run: |
+          if [ -f scripts/lint_rules.py ]; then
+            python scripts/lint_rules.py --fail-on-conflict
+          else
+            echo "lint_rules.py not present; skipping"
+          fi
+
+      - name: Bump manifest version
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          p = Path("manifest.yaml")
+          text = p.read_text()
+          m = re.search(r'version:\s*"(d+)\.(d+)\.(d+)"', text)
+          if m:
+              major, minor, patch = map(int, m.groups())
+              new = f'{major}.{minor}.{patch + 1}'
+              text = text.replace(m.group(0), f'version: "{new}"')
+              p.write_text(text)
+              print(f"Bumped to {new}")
+          PY
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "chore(tsar): auto-sync rules and bump version"
+          branch: auto/tsar-sync
+          commit-message: "chore(tsar): auto-sync rules and bump version"
+          delete-branch: true
