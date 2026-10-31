@@ -121,6 +121,26 @@ def cmd_drift(args) -> int:
         print("File set unchanged; content may differ.")
     return 1
 
+def _atomic_replace_directory(staged_dir: Path, destination: Path, backup: Path) -> None:
+    """Promote a staged directory and restore the previous tree if promotion fails."""
+    previous_moved = False
+    if destination.exists():
+        os.replace(destination, backup)
+        previous_moved = True
+    try:
+        os.replace(staged_dir, destination)
+    except Exception as install_error:
+        if previous_moved and backup.exists() and not destination.exists():
+            try:
+                os.replace(backup, destination)
+            except Exception as rollback_error:
+                raise RuntimeError(
+                    f"promotion failed ({install_error}); rollback failed ({rollback_error}); "
+                    f"the previous installation remains at {backup}"
+                ) from rollback_error
+        raise
+
+
 def cmd_init(args) -> int:
     """Install or refresh the vendored TSAR tree without discarding user data."""
     import tempfile
@@ -216,17 +236,8 @@ def cmd_init(args) -> int:
 
         # Move the previous tree aside, then promote the fully prepared tree.
         # If promotion fails, restore the previous tree before returning.
-        previous_moved = False
-        if tsar_dir.exists():
-            os.replace(tsar_dir, backup_dir)
-            previous_moved = True
-        try:
-            os.replace(stage_dir, tsar_dir)
-            stage_dir = None
-        except Exception:
-            if previous_moved and backup_dir.exists() and not tsar_dir.exists():
-                os.replace(backup_dir, tsar_dir)
-            raise
+        _atomic_replace_directory(stage_dir, tsar_dir, backup_dir)
+        stage_dir = None
 
     except Exception as exc:
         if stage_dir is not None and stage_dir.exists():
@@ -237,6 +248,8 @@ def cmd_init(args) -> int:
 
     if backup_dir.exists():
         print(f"Previous TSAR installation retained at {backup_dir.name}")
+
+    partial_failure = False
 
     # Never overwrite an existing agent instruction file: it may contain
     # project-specific guidance maintained by the user.
@@ -261,6 +274,7 @@ def cmd_init(args) -> int:
                 else:
                     os.replace(prompt_temp, destination)
         except Exception as exc:
+            partial_failure = True
             print(f"WARNING: TSAR installed, but agent prompt was not created: {exc}",
                   file=sys.stderr)
 
@@ -302,11 +316,12 @@ def cmd_init(args) -> int:
                 else:
                     print("Existing TSAR pre-commit integration preserved.")
         except Exception as exc:
+            partial_failure = True
             print(f"WARNING: TSAR installed, but Git hook setup failed: {exc}",
                   file=sys.stderr)
 
     print(f"TSAR v{version} installed at {tsar_dir}")
-    return 0
+    return 1 if partial_failure else 0
 
 def main() -> int:
     p = argparse.ArgumentParser(prog="tsar", description="TSAR security CLI")
