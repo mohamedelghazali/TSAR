@@ -1,7 +1,7 @@
 """Verify IAM rules reference required concepts."""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 IAM = ROOT / "rules" / "iam"
 
 def test_iam_files_present():
