@@ -242,7 +242,7 @@ def cmd_init(args) -> int:
     except Exception as exc:
         if stage_dir is not None and stage_dir.exists():
             shutil.rmtree(stage_dir, ignore_errors=True)
-        print(f"TSAR installation failed; previous installation was preserved: {exc}",
+        print(f"TSAR installation failed: {exc}",
               file=sys.stderr)
         return 1
 
