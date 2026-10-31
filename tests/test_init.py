@@ -102,3 +102,37 @@ def test_init_refresh_is_repeatable(tmp_path):
     assert (tmp_path / ".tsar" / "config.json").read_text() != first_config
     assert (tmp_path / "CLAUDE.md").exists()
     assert not (tmp_path / ".cursorrules").exists() or (tmp_path / ".cursorrules").is_file()
+
+
+def test_init_rolls_back_previous_installation_if_promotion_fails(tmp_path, monkeypatch):
+    """A failed stage promotion must restore the prior .tsar directory."""
+    import importlib.util
+    from types import SimpleNamespace
+
+    target = tmp_path
+    old_tsar = target / ".tsar"
+    old_tsar.mkdir()
+    sentinel = old_tsar / "operator-data.txt"
+    sentinel.write_text("must survive rollback", encoding="utf-8")
+
+    spec = importlib.util.spec_from_file_location("tsar_cli_for_init_test", CLI)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+
+    real_replace = module.os.replace
+
+    def fail_stage_promotion(source, destination):
+        source_path = Path(source)
+        destination_path = Path(destination)
+        if source_path.name.startswith(".tsar-stage-") and destination_path == old_tsar:
+            raise OSError("simulated atomic promotion failure")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(module.os, "replace", fail_stage_promotion)
+    result = module.cmd_init(SimpleNamespace(path=str(target), agent="generic"))
+
+    assert result == 1
+    assert sentinel.read_text(encoding="utf-8") == "must survive rollback"
+    assert not list(target.glob(".tsar-stage-*"))
+    assert not list(target.glob(".tsar.backup.*"))
