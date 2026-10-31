@@ -73,3 +73,17 @@ def test_manifest_all_files_exist():
     for group, files in data["active_files"].items():
         for rel in files:
             assert (ROOT / rel).exists(), f"missing {rel}"
+
+
+def test_secret_scanner_accepts_single_file_target(tmp_path):
+    f = tmp_path / "single.py"
+    f.write_text('AWS_KEY = "AKIAIOSFODNN7EXAMPLE"\n')
+    r = run([sys.executable, "skills/secret-scanner/scanner.py", str(f)])
+    assert r.returncode == 1
+    assert "aws_key" in r.stdout
+
+def test_scanners_reject_missing_path(tmp_path):
+    missing = tmp_path / "does-not-exist"
+    for script in ["skills/secret-scanner/scanner.py", "skills/secure-review/review.py"]:
+        r = run([sys.executable, script, str(missing)])
+        assert r.returncode == 2
