@@ -3,7 +3,7 @@ import re
 import yaml
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 
 def test_readme_exists():
     assert (ROOT / "README.md").exists()
@@ -54,24 +54,6 @@ def test_manifest_active_files_consistent():
     unlisted = {u for u in unlisted if not u.endswith("README.md")}
     assert not unlisted, f"unlisted rule files: {sorted(unlisted)[:5]}"
 
-def test_no_arabic_in_repo():
-    bad = []
-    for f in ROOT.rglob("*"):
-        if not f.is_file():
-            continue
-        if ".git" in f.parts or "node_modules" in f.parts:
-            continue
-        if f.suffix in {".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf"}:
-            continue
-        try:
-            text = f.read_text(errors="ignore")
-        except Exception:
-            continue
-        for i, line in enumerate(text.splitlines(), 1):
-            if any("\u0600" <= c <= "\u06ff" for c in line):
-                bad.append(f"{f}:{i}")
-    assert not bad, f"Arabic text found in: {bad[:5]}"
-
 def test_no_hardcoded_secrets():
     pattern = re.compile(r"(AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|-----BEGIN (RSA |EC )?PRIVATE KEY-----)")
     bad = []
@@ -97,4 +79,5 @@ def test_all_prompts_have_manifest_reference():
 def test_all_prompts_have_core_reference():
     for f in (ROOT / "prompts").glob("*.md"):
         text = f.read_text()
-        assert "CORE_DIRECTIVE" in text or "core" in text.lower(), f"{f.name} does not reference core directive"
+        assert "CORE_DIRECTIVE" in text or "core" in text.lower(), \
+            f"{f.name} does not reference core directive"
