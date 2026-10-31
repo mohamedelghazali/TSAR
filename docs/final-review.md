@@ -6,7 +6,7 @@
 | Metric | Count |
 |---|---|
 | Rule files | 170+ |
-| Rule domains | 36 |
+| Rule domains | 37 |
 | Agent prompts | 16 |
 | Skill scripts | 8 (4 SKILL.md + 4 Python) |
 | Tools | 5 |
@@ -76,7 +76,7 @@ Every TSAR deployment produces:
 
 ## Sign-Off Checklist
 
-- [ ] All 36 rule domains present and tested.
+- [ ] All 37 rule domains present and tested.
 - [ ] All 15 agent prompts present.
 - [ ] All scanners pass on secure examples.
 - [ ] All scanners fail on anti-patterns.
