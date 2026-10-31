@@ -1,65 +1,64 @@
 # TSAR Roadmap
 
 ## Status Legend
-- ✅ Shipped
-- 🚧 In progress
-- 📋 Planned
-- 💡 Proposed
+- Shipped: implemented and present in the repository.
+- In progress: actively being implemented.
+- Planned: approved direction, not yet implemented.
+- Proposed: under consideration; not a release commitment.
 
-## v1.0 — Foundation (Current)
-- ✅ Core directive, prohibitions, enforcement levels.
-- ✅ Crypto rules (algorithms, key management, AEAD, PQC, constant-time).
-- ✅ OWASP LLM Top 10 controls.
-- ✅ OWASP Web Top 10 controls.
-- ✅ Platform rules (web, mobile, desktop, embedded, distributed, edge, Kubernetes, IoT).
-- ✅ Hardware rules (TPM, HSM, Secure Enclave, secure boot, side channels).
-- ✅ Data rules (PII, logging, database encryption, backup, migration, deletion).
-- ✅ Cloud rules (AWS, GCP, Azure, multi-cloud).
-- ✅ Containers, API, IAM, supply chain.
-- ✅ Messaging, database, observability, secrets.
-- ✅ Networking, compute, testing, governance.
-- ✅ Privacy, threat intel, forensics.
-- ✅ Identity federation, email, endpoint.
-- ✅ Backup, DR, legal hold.
-- ✅ Application security, infrastructure, development, emerging tech.
-- ✅ 15 agent prompts.
-- ✅ CLI, orchestrator, report, LSP, web dashboard.
-- ✅ CI integrations (GitHub, GitLab, Bitbucket, Azure).
-- ✅ Compliance mappings (SOC 2, ISO 27001, PCI DSS, HIPAA, GDPR).
-- ✅ Examples in 9 languages.
-- ✅ Test suite covering all domains.
+## Current repository version
 
-## v1.1 — Depth and Reach
-- 📋 SARIF output from all scanners (currently only secure-review).
-- 📋 `tsar fix` command for auto-remediation of common patterns.
-- 📋 Additional agent prompts: Aider, Codeium, Tabnine.
-- 📋 Bloom filter for secret scanning at scale.
-- 📋 Differential testing for crypto implementations.
-- 📋 Formal verification integration for Tier-1 crypto.
-- 📋 GraphQL-specific fuzzing integration.
+The repository metadata and Python CLI currently identify the codebase as **1.1.1**.
+This is a patch-level version on the 1.x line. It must not be represented as
+v2.0.0: the v2.0 capabilities below remain proposed and are not implemented
+release criteria for the current codebase.
 
-## v1.2 — Ecosystem
-- 📋 PyPI-published `tsar-cli` with `pipx install tsar`.
-- 📋 Homebrew formula.
-- 📋 Docker image for CI (`ghcr.io/mohamedelghazali/tsar`).
-- 📋 GitHub Action marketplace listing.
-- 📋 GitLab CI component registry.
-- 📋 VS Code extension marketplace listing.
-- 📋 JetBrains plugin.
+## v1.0 — Foundation (Shipped)
+- Core directive, prohibitions, and enforcement levels.
+- Crypto rules (algorithms, key management, AEAD, PQC, constant-time).
+- OWASP LLM Top 10 and OWASP Web Top 10 controls.
+- Platform, hardware, data, cloud, container, API, IAM, and supply-chain rules.
+- Messaging, database, observability, secrets, networking, and compute controls.
+- Testing, governance, privacy, threat-intelligence, forensics, identity, email,
+  endpoint, backup, disaster-recovery, legal-hold, application-security,
+  infrastructure, development, and emerging-technology rule domains.
+- Agent prompts, CLI, orchestrator, report, LSP, dashboard, and CI integrations.
+- Compliance mappings and secure/anti-pattern examples.
 
-## v1.3 — Intelligence
-- 💡 Rule efficacy tracking (which rules catch real bugs).
-- 💡 Adaptive strictness based on repository history.
-- 💡 Integration with GitHub Code Scanning trends.
-- 💡 Anonymous telemetry (opt-in) for rule improvement.
-- 💡 Community-contributed rules with review workflow.
+## v1.1 — Depth and Reach (Planned / partially delivered)
+- SARIF output from all scanners (currently only secure-review).
+- `tsar fix` command for auto-remediation of common patterns.
+- Additional agent prompts: Aider, Codeium, Tabnine.
+- Bloom filter for secret scanning at scale.
+- Differential testing for crypto implementations.
+- Formal verification integration for Tier-1 crypto.
+- GraphQL-specific fuzzing integration.
 
-## v2.0 — Next Generation
-- 💡 Formal spec for rules (machine-checkable beyond regex).
-- 💡 Cross-language semantic analysis.
-- 💡 Runtime enforcement via eBPF.
-- 💡 Automatic rule generation from discovered vulnerabilities.
-- 💡 Integration with AI agent frameworks (LangChain, LlamaIndex, AutoGen).
+## v1.2 — Ecosystem (Planned)
+- PyPI-published `tsar-cli` with `pipx install tsar`.
+- Homebrew formula.
+- Docker image for CI (`ghcr.io/mohamedelghazali/tsar`).
+- GitHub Action marketplace listing.
+- GitLab CI component registry.
+- VS Code extension marketplace listing.
+- JetBrains plugin.
+
+## v1.3 — Intelligence (Proposed)
+- Rule efficacy tracking.
+- Adaptive strictness based on repository history.
+- Integration with GitHub Code Scanning trends.
+- Anonymous opt-in telemetry for rule improvement.
+- Community-contributed rules with review workflow.
+
+## v2.0 — Next Generation (Proposed; not implemented)
+- Formal machine-checkable rule specifications beyond regex.
+- Cross-language semantic analysis.
+- Runtime enforcement via eBPF.
+- Automatic rule generation from discovered vulnerabilities.
+- Integration with AI agent frameworks (LangChain, LlamaIndex, AutoGen).
+
+A v2.0.0 stable release must not be tagged until the intended v2.0 scope is
+implemented, version metadata is updated consistently, and release gates pass.
 
 ## Out of Scope
 - Runtime WAF.
@@ -68,6 +67,5 @@
 - Certification body functions.
 
 ## How to Contribute to Roadmap
-- Open an issue with the `roadmap` label.
-- Provide use case, expected benefit, and complexity estimate.
-- Maintainers triage quarterly.
+Open an issue with the `roadmap` label. Provide a use case, expected benefit,
+and complexity estimate. Maintainers triage proposals periodically.

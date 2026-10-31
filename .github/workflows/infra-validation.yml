@@ -1,27 +1,27 @@
 name: Infrastructure Validation
 
 on:
+  # This workflow is a required check on protected PRs. Do not use path
+  # filters here: GitHub can leave a required check pending when a PR does
+  # not touch the filtered paths.
   push:
-    paths:
-      - 'examples/secure/terraform/**'
-      - 'examples/secure/kubernetes/**'
-      - '.github/workflows/infra-validation.yml'
+    branches:
+      - main
   pull_request:
-    paths:
-      - 'examples/secure/terraform/**'
-      - 'examples/secure/kubernetes/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   terraform:
+    name: Terraform Static Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1 # v3
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: '1.6.1'
       - run: terraform -chdir=examples/secure/terraform fmt -check
@@ -35,9 +35,10 @@ jobs:
       - run: terraform -chdir=examples/secure/terraform validate
 
   kubernetes:
+    name: Kubernetes Schema Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install kubeconform
@@ -53,3 +54,23 @@ jobs:
           -schema-location default
           -schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/3eb90d47aba8d61919d4419dd38301536e32a94b/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
           examples/secure/kubernetes/
+
+  infrastructure-validation:
+    name: Infrastructure Validation
+    if: always()
+    needs:
+      - terraform
+      - kubernetes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both infrastructure validations
+        env:
+          TERRAFORM_RESULT: ${{ needs.terraform.result }}
+          KUBERNETES_RESULT: ${{ needs.kubernetes.result }}
+        run: |
+          if [ "$TERRAFORM_RESULT" != "success" ] || [ "$KUBERNETES_RESULT" != "success" ]; then
+            echo "Terraform: $TERRAFORM_RESULT"
+            echo "Kubernetes: $KUBERNETES_RESULT"
+            exit 1
+          fi
+          echo "Terraform and Kubernetes static validation passed."

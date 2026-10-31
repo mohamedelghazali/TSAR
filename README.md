@@ -4,6 +4,11 @@ TSAR is an enforceable security policy repository injected into AI coding agents
 It provides mandatory rules, platform baselines, cryptographic standards, and
 agentic-AI controls, with upstream fingerprint monitoring and deliberately reviewed rule updates.
 
+**Repository version:** 1.1.1 (see `VERSION`, `manifest.yaml`, and
+`tools/tsar-cli/pyproject.toml`). The v2.0 roadmap is proposed work, not the
+current release. See [Release Qualification](docs/release-qualification.md)
+for verified evidence and outstanding release gates.
+
 ## Coverage
 
 - **37 rule domains** across application, infrastructure, cloud, data, cryptography, networking, compliance, and emerging technology.
@@ -79,7 +84,11 @@ OPA/LSP/Terraform builds.
 
 ## License
 
-TSAR uses a custom source-available license. Defined non-commercial uses are permitted; commercial use requires prior written authorization and a separate commercial license. This is not an OSI-approved Open Source license. See [LICENSE](LICENSE) for the full terms and the treatment of previously distributed MIT versions.
+TSAR uses a custom source-available license. Defined non-commercial uses are
+permitted; commercial use requires prior written authorization and a separate
+commercial license. This is not an OSI-approved Open Source license. See
+[LICENSE](LICENSE) for the full terms and the treatment of previously
+distributed MIT versions.
 
 ## Security
 
