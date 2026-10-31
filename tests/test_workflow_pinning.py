@@ -30,3 +30,11 @@ def test_workflows_do_not_download_moving_latest_binaries():
         text = workflow.read_text(encoding="utf-8")
         assert "releases/latest" not in text, workflow.name
         assert "downloads/latest" not in text, workflow.name
+
+
+def test_checkout_credentials_are_disabled_exactly_once_per_checkout():
+    for workflow in WORKFLOWS.glob("*.yml"):
+        text = workflow.read_text(encoding="utf-8")
+        checkouts = text.count("uses: actions/checkout@")
+        disabled = text.count("persist-credentials: false")
+        assert disabled == checkouts, workflow.name
