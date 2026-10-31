@@ -6,6 +6,7 @@ on:
       - 'examples/secure/terraform/**'
       - 'examples/secure/kubernetes/**'
       - 'schemas/kubernetes/**'
+      - 'tests/test_examples_infra.py'
       - '.github/workflows/infra-validation.yml'
   pull_request:
     paths:
