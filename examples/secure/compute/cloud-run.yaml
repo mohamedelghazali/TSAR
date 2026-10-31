@@ -1,0 +1,46 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: tsar-app
+  annotations:
+    run.googleapis.com/ingress: internal-and-cloud-load-balancing
+    run.googleapis.com/execution-environment: gen2
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "20"
+        run.googleapis.com/cloudsql-instances: "project:region:instance"
+        run.googleapis.com/vpc-access-connector: projects/project/locations/region/connectors/tsar
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: tsar-app@project.iam.gserviceaccount.com
+      containers:
+        - name: app
+          image: europe-west1-docker.pkg.dev/project/tsar/app@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          ports:
+            - containerPort: 8443
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tsar-db
+                  key: password
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+            periodSeconds: 30
