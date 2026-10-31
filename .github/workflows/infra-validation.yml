@@ -5,11 +5,17 @@ on:
     paths:
       - 'examples/secure/terraform/**'
       - 'examples/secure/kubernetes/**'
+      - 'schemas/kubernetes/**'
       - '.github/workflows/infra-validation.yml'
   pull_request:
     paths:
       - 'examples/secure/terraform/**'
       - 'examples/secure/kubernetes/**'
+      - 'schemas/kubernetes/**'
+      - '.github/workflows/infra-validation.yml'
+
+permissions:
+  contents: read
 
 jobs:
   terraform:
@@ -19,17 +25,43 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '1.6.1'
-      - run: terraform -chdir=examples/secure/terraform fmt -check
-      - run: terraform -chdir=examples/secure/terraform init -backend=false
-      - run: terraform -chdir=examples/secure/terraform validate
+      - name: Format Terraform
+        run: terraform -chdir=examples/secure/terraform fmt -check
+      - name: Generate provider lock checksums
+        run: |
+          terraform -chdir=examples/secure/terraform providers lock \
+            -platform=linux_amd64 \
+            -platform=darwin_arm64 \
+            -platform=windows_amd64
+      - name: Initialize with generated lockfile
+        run: terraform -chdir=examples/secure/terraform init -backend=false -lockfile=readonly
+      - name: Validate Terraform
+        run: terraform -chdir=examples/secure/terraform validate
+      - name: Upload generated provider lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-provider-lockfile
+          path: examples/secure/terraform/.terraform.lock.hcl
+          if-no-files-found: error
 
   kubernetes:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install kubeconform
+      - name: Install checksum-verified kubeconform
+        shell: bash
         run: |
-          curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
-          sudo mv kubeconform /usr/local/bin/
-      # kubeconform skips custom resources without published schemas; validate built-in Kubernetes objects here.
-      - run: kubeconform -strict -ignore-missing-schemas -summary examples/secure/kubernetes/
+          set -euo pipefail
+          KC_VER="v0.7.0"
+          KC_SHA="c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3"
+          curl -fsSL -o /tmp/kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/$KC_VER/kubeconform-linux-amd64.tar.gz"
+          echo "$KC_SHA  /tmp/kubeconform.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp kubeconform
+          sudo install -m 0755 /tmp/kubeconform /usr/local/bin/kubeconform
+      - name: Validate Kubernetes resources and vendored CRDs
+        run: |
+          kubeconform -strict -summary \
+            -schema-location default \
+            -schema-location 'file://schemas/kubernetes/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            examples/secure/kubernetes/
