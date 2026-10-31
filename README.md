@@ -2,7 +2,7 @@
 
 TSAR is an enforceable security policy repository injected into AI coding agents.
 It provides mandatory rules, platform baselines, cryptographic standards, and
-agentic-AI controls, with automatic synchronization via manifest versioning.
+agentic-AI controls, with upstream fingerprint monitoring and manual rule review before updates.
 
 ## Coverage
 
@@ -78,7 +78,7 @@ OPA/LSP/Terraform builds.
 
 ## License
 
-See [LICENSE](LICENSE).
+The current repository license is [MIT](LICENSE). A proposed future licensing transition is documented in [licensing-transition.md](docs/licensing-transition.md); it does not change existing MIT grants.
 
 ## Security
 
