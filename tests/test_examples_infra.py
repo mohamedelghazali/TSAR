@@ -62,8 +62,7 @@ def test_k8s_tls_secret_is_managed_externally():
 
 def test_k8s_deployment_marks_image_as_required_release_input():
     text = (K8S / "deployment.yaml").read_text()
-    assert "REPLACE_WITH_VERIFIED_64_HEX_DIGEST" in text
-    assert "REPLACE_WITH_VERIFIED_64_HEX_DIGEST" in text
+    assert "image: registry.example.com/tsar-app@sha256:REPLACE_WITH_VERIFIED_64_HEX_DIGEST" in text
 
 
 def test_infra_workflow_validates_external_secret_with_pinned_schema():
