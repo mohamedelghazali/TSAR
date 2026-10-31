@@ -83,6 +83,6 @@ Every TSAR deployment produces:
 - [ ] CI workflows green.
 - [ ] Compliance mappings reference only existing rules.
 - [ ] Documentation covers every component.
-- [ ] No Arabic text in any file.
+- [ ] No empty files in `rules/`, `prompts/`, `system/`, `skills/`, `docs/`, `integrations/`.
 - [ ] No secrets in any file.
 - [ ] Manifest references all active files.
