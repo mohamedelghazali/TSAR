@@ -2,7 +2,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "tools" / "tsar-cli" / "tsar.py"
 
 def run(args):
