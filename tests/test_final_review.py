@@ -58,7 +58,7 @@ def test_no_hardcoded_secrets():
     pattern = re.compile(r"(AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|-----BEGIN (RSA |EC )?PRIVATE KEY-----)")
     bad = []
     for f in ROOT.rglob("*"):
-        if not f.is_file() or ".git" in f.parts:
+        if not f.is_file() or ".git" in f.parts or "__pycache__" in f.parts or f.suffix == ".pyc":
             continue
         if "DO_NOT_GENERATE" in str(f) or "anti-patterns" in str(f):
             continue
