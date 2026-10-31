@@ -27,13 +27,5 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.app.id]
   }
 
-  egress {
-    description = "No outbound destinations"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = []
-  }
-
   tags = { Name = "tsar-rds-${var.environment}" }
 }
