@@ -1,117 +1,83 @@
 # TSAR Architecture
 
 ## Purpose
-TSAR is a security governance layer for AI-generated code. It enforces rules at generation time, verifies them at commit time, and monitors them at runtime.
+
+TSAR is a security governance layer for AI-assisted software development. It provides structured security rules and agent instructions, then checks code through local tools and repository automation. It is designed to reduce security defects—not to guarantee that every vulnerability is prevented.
 
 ## Layers
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  L1 — Policy Layer (system/)                                    │
-│  CORE_DIRECTIVE.md · DO_NOT_GENERATE.md · ENFORCEMENT_LEVELS.md │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  L2 — Rules Layer (rules/)                                      │
-│  crypto · owasp-llm · owasp-web · agentic-ai · ai-models        │
-│  platform · hardware · data · cloud · containers · api · iam    │
-│  supply-chain · messaging · database · observability · secrets  │
-│  networking · compute · testing · governance · privacy          │
-│  threat-intel · forensics · identity-federation · email         │
-│  endpoint · backup · disaster-recovery · legal-hold             │
-│  application-security · infrastructure · development · emerging │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  L3 — Enforcement Layer (skills/ + tools/)                      │
-│  secret-scanner · secure-review · crypto-inventory              │
-│  threat-modeler · tsar-cli · tsar-orchestrator · tsar-report    │
-│  tsar-lsp · tsar-web                                            │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  L4 — Integration Layer (integrations/ + prompts/)              │
-│  GitHub Actions · GitLab CI · Bitbucket · Azure DevOps          │
-│  pre-commit hooks · 15 agent prompts                            │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  L5 — Lifecycle Layer (manifest.yaml + .github/workflows/)      │
-│  Version pinning · auto-update · drift detection · validation   │
-└─────────────────────────────────────────────────────────────────┘
-```
+    L1 — Policy Layer (system/)
+         Core directive, prohibitions, enforcement levels
+                         |
+                         v
+    L2 — Rules Layer (rules/ + manifest.yaml)
+         37 domains, 171 active rule files, versioned inventory
+                         |
+                         v
+    L3 — Agent Guidance (prompts/)
+         15 agent-specific instruction packs + universal fallback
+                         |
+                         v
+    L4 — Verification (skills/ + tools/)
+         Secret scanning, secure review, CLI, orchestrator, reports
+                         |
+                         v
+    L5 — Repository Governance (integrations/ + .github/)
+         Hooks, CI checks, policy validation, audit artifacts
 
 ## Data Flow
 
-### At Agent Generation Time
-1. Agent fetches `manifest.yaml` and reads `active_files`.
-2. Agent applies `CORE_DIRECTIVE.md` and relevant rules.
-3. Agent generates code that satisfies all applicable rules.
-4. Agent runs secret scanner and secure review mentally (or via skill calls).
-5. Agent emits code with rule citations where non-obvious.
+### During AI-Assisted Development
+1. The developer installs the instruction file for the selected agent.
+2. The instructions identify TSAR's manifest and relevant security rules.
+3. The agent is asked to apply those rules while generating or modifying code.
+4. The developer runs TSAR scanners and reviews findings.
 
-### At Commit Time
-1. Pre-commit hook runs `secret-scanner` and `secure-review` on staged files.
-2. Blocks commit on any HIGH finding or secret.
-3. `lint_rules` validates the manifest.
+Agent instructions are a guidance layer. They cannot force a provider or model to comply and must not be treated as a security boundary.
 
-### At CI Time
-1. Orchestrator runs all steps in parallel.
-2. Emits JSON/Markdown report.
-3. Blocks merge on HIGH findings.
-4. Uploads artifacts for audit.
+### At Commit and CI Time
+1. Local hooks can run scanners against staged files.
+2. Rule linting and manifest validation detect repository consistency issues.
+3. CI workflows run tests, scanners, policy checks, and infrastructure schema/static validation.
+4. Required checks can block pull-request merges when configured in GitHub.
 
-### At Runtime
-1. Application uses secure patterns from `examples/secure/`.
-2. EDR/runtime policies reference `rules/containers/runtime-security.md`.
-3. SIEM consumes audit logs redacted per `rules/data/logging-redaction.md`.
+### Runtime
 
-### Lifecycle
-1. GitHub Actions daily fetch upstream standards.
-2. Compares hashes with `.tsar-cache/`.
-3. Bumps manifest version; opens PR.
-4. Team reviews and merges.
-5. Agents pick up new version at next session.
+TSAR is not itself a runtime monitoring daemon, WAF, EDR, or SIEM. Runtime controls described by individual rules must be implemented in the target application or infrastructure and monitored by the team's chosen runtime security products.
 
 ## Trust Boundaries
 
-| Boundary | Trust Level | Controls |
+| Boundary | Risk | TSAR / deployment control |
 |---|---|---|
-| Agent ↔ User | Untrusted input | Prompt injection defenses |
-| Agent ↔ Rules | Trusted ruleset | Manifest versioning, signature verification |
-| CI ↔ Repository | Trusted | OIDC identity, SBOM |
-| Runtime ↔ Secrets | Trusted only if verified | Vault/KMS, fail-closed |
-| External ↔ Internal | Untrusted | WAF, mTLS, rate limits |
+| Agent ↔ User | Untrusted input and prompt injection | Applicable LLM and agentic-AI rules |
+| Agent ↔ Rules | Stale or unavailable instructions | Versioned manifest and local vendoring |
+| CI ↔ Repository | Unreviewed or unsafe changes | Protected branch and required checks |
+| Application ↔ Secrets | Credential exposure | Secret scanning and platform secret stores |
+| External ↔ Internal | Network and API threats | Apply relevant WAF, mTLS, auth, and zero-trust controls |
 
 ## Design Principles
 
-1. **Fail closed**: if rules cannot load, refuse to generate for Tier-1.
-2. **Structural over semantic**: prompts separated by role, not concatenated.
-3. **Defense in depth**: multiple layers, no single point of failure.
-4. **Time-bound exceptions**: every suppression has an expiry.
-5. **Evidence-driven**: every control produces auditable evidence.
-6. **Portable**: works with 15 agents without vendor lock-in.
-7. **Testable**: every rule has a test in `tests/`.
+1. **Fail closed where configured**: critical workflows should fail when required rules cannot be loaded.
+2. **Defense in depth**: combine agent guidance, scanners, hooks, CI, and human review.
+3. **Time-bound exceptions**: document suppressions and set expiry dates.
+4. **Evidence-driven**: retain CI logs and reviewable reports.
+5. **Portable**: keep rules and integrations usable across development tools.
+6. **Testable**: validate rule files, manifests, scanners, and integrations.
 
 ## Extension Points
 
-- **New rule**: add file in `rules/`, reference in `manifest.yaml`, add test.
-- **New skill**: add directory in `skills/`, implement `SKILL.md` and script.
-- **New agent**: add prompt in `prompts/`, update compatibility matrix.
-- **New integration**: add pipeline template in `integrations/`.
-- **New compliance framework**: add mapping in `docs/compliance/`.
+- **New rule**: add a file under rules/, reference it in manifest.yaml, and add suitable tests.
+- **New agent**: add an instruction file under prompts/ and update the compatibility matrix.
+- **New integration**: add a pipeline template under integrations/.
+- **New compliance framework**: add a mapping under docs/compliance/.
 
 ## Failure Modes
 
 | Failure | Detection | Response |
 |---|---|---|
-| Manifest unreachable | `tsar drift` fails | ADVISORY mode; refuse Tier-1 |
-| Rule outdated | Upstream hash changed | Auto-update PR |
-| Agent ignores rules | Scanner finds violation | Block commit; re-prompt |
-| Scanner false negative | Not detected | Complementary SAST required |
-| Tool output poisoned | Provenance tagging | Treated as data |
-| Compromised agent | Anomalous commits | Disable, review, re-enable with strict mode |
+| Manifest unreachable | Lifecycle or drift check fails | Use a reviewed local copy or fail closed |
+| Rule outdated | Version/hash comparison | Review and merge an update |
+| Agent ignores instructions | Scanner or reviewer finds a violation | Reject the change and correct integration |
+| Scanner false negative | Not detected by current checks | Add complementary SAST and human review |
+| External tool output is poisoned | Untrusted content reaches agent | Treat tool output as data, not instructions |
+| Compromised agent | Suspicious generated changes | Disable integration and investigate |
