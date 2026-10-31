@@ -1,15 +1,11 @@
 name: TSAR Complete Release Gates
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
-    paths:
-      - 'verify-all.sh'
-      - 'requirements-dev.txt'
-      - 'policies/**'
-      - 'tools/tsar-lsp/**'
-      - '.github/workflows/release-gates.yml'
-      - '.github/workflows/test.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
