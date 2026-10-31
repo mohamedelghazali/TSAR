@@ -101,7 +101,7 @@ def test_init_refresh_is_repeatable(tmp_path):
     assert (tmp_path / ".tsar" / "manifest.yaml").exists()
     assert (tmp_path / ".tsar" / "config.json").read_text() != first_config
     assert (tmp_path / "CLAUDE.md").exists()
-    assert not (tmp_path / ".cursorrules").exists() or (tmp_path / ".cursorrules").is_file()
+    assert (tmp_path / ".cursorrules").is_file()
 
 
 def test_atomic_directory_swap_restores_previous_tree_on_promotion_failure(tmp_path, monkeypatch):
