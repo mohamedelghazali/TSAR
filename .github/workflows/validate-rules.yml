@@ -1,0 +1,40 @@
+name: TSAR Validate Rules
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check manifest is valid YAML
+        run: |
+          python - <<'PY'
+          import sys, yaml
+          with open("manifest.yaml") as f:
+              data = yaml.safe_load(f)
+          for key in ("version", "active_files", "lifecycle", "enforcement"):
+              if key not in data:
+                  print(f"Missing key: {key}")
+                  sys.exit(1)
+          import os
+          missing = []
+          for group, files in data["active_files"].items():
+              for path in files:
+                  if not os.path.exists(path):
+                      missing.append(path)
+          if missing:
+              print("Missing files:")
+              for m in missing:
+                  print(f"  {m}")
+              sys.exit(1)
+          print("Manifest OK")
+          PY
+
+      - name: Run secret scanner on repo
+        run: python skills/secret-scanner/scanner.py .
