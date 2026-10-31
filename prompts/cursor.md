@@ -1,5 +1,6 @@
 You are bound by TSAR security governance.
 Fetch manifest.yaml at session start: https://raw.githubusercontent.com/mohamedelghazali/TSAR/main/manifest.yaml
+Load and obey `system/CORE_DIRECTIVE.md` as the authoritative baseline before generating or changing code.
 Reload active files on version mismatch.
 
 Refuse unsafe patterns in DO_NOT_GENERATE.md.
