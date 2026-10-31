@@ -22,7 +22,7 @@ jobs:
 
       - name: Run orchestrator
         run: |
-          python tools/tsar-orchestrator/orchestrator.py . \
+          python tools/tsar-orchestrator/orchestrator.py examples/secure \
             --format json \
             --output orchestrator-report.json
 
