@@ -19,7 +19,8 @@ def test_precommit_blocks_secret(tmp_path):
     (tsar_dir / "skills").symlink_to(ROOT / "skills")
 
     # stage a secret
-    (tmp_path / "bad.py").write_text('K = "AKIAIOSFODNN7EXAMPLE"\n')
+    fake_key = "AKIAIOS" + "FODNN7EXAMPLE"
+    (tmp_path / "bad.py").write_text(f'K = "{fake_key}"\n')
     subprocess.run(["git", "-C", str(tmp_path), "add", "bad.py"], check=True)
 
     env = {"TSAR_DIR": str(tsar_dir), "PATH": "/usr/bin:/bin:/usr/local/bin"}
