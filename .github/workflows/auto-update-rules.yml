@@ -23,19 +23,42 @@ jobs:
       - name: Install dependencies
         run: pip install pyyaml
 
+      - name: Test synchronization safety
+        run: python -m pytest tests/test_sync_standards.py -q
+
       - name: Sync upstream standards
         run: python scripts/sync_standards.py
 
       - name: Lint rules
         run: python scripts/lint_rules.py
 
+      - name: Detect actual changes
+        id: changes
+        shell: bash
+        run: |
+          if git diff --quiet -- .tsar-cache manifest.yaml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No upstream fingerprint changes; no version bump or PR required."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Upstream fingerprints changed; preparing review PR."
+          fi
+
       - name: Bump manifest version
+        if: steps.changes.outputs.changed == 'true'
         run: python scripts/bump_manifest.py
 
       - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
-          title: "chore(tsar): auto-sync rules and bump version"
+          title: "chore(tsar): review upstream standards changes"
+          body: |
+            Upstream source fingerprints changed.
+
+            This PR does not automatically rewrite TSAR rule content. Review upstream
+            material, update affected rules manually, run the complete verification
+            suite, and only then merge.
           branch: auto/tsar-sync
-          commit-message: "chore(tsar): auto-sync rules and bump version"
+          commit-message: "chore(tsar): record upstream standards fingerprints"
           delete-branch: true
