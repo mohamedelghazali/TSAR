@@ -6,7 +6,7 @@ agentic-AI controls, with automatic synchronization via manifest versioning.
 
 ## Coverage
 
-- **36 rule domains** across application, infrastructure, cloud, data, cryptography, networking, compliance, and emerging technology.
+- **37 rule domains** across application, infrastructure, cloud, data, cryptography, networking, compliance, and emerging technology.
 - **15 AI agents** supported with dedicated prompts.
 - **9 programming languages** with secure reference implementations.
 - **5 compliance frameworks** mapped (SOC 2, ISO 27001, PCI DSS, HIPAA, GDPR).
@@ -36,7 +36,7 @@ GitHub Copilot, Manus, Windsurf, SuperNinja, Replit Agent, Devin, Kimi.
 | Directory | Purpose |
 |---|---|
 | `system/` | Core directive, prohibitions, enforcement levels |
-| `rules/` | 36 domains of security rules |
+| `rules/` | 37 domains of security rules |
 | `skills/` | Runnable scanners and helpers |
 | `tools/` | CLI, orchestrator, report, LSP, dashboard |
 | `integrations/` | CI/CD templates for 4 platforms |
