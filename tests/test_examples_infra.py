@@ -40,3 +40,33 @@ def test_tf_rds_encrypted():
     assert "storage_encrypted" in text
     assert "publicly_accessible" in text
     assert "false" in text
+
+
+def test_tf_database_rules_reference_the_rds_security_group():
+    text = (TF / "security-groups.tf").read_text()
+    assert 'resource "aws_vpc_security_group_egress_rule" "app_to_rds"' in text
+    assert 'resource "aws_vpc_security_group_ingress_rule" "rds_from_app"' in text
+    assert "referenced_security_group_id = aws_security_group.rds.id" in text
+    assert "referenced_security_group_id = aws_security_group.app.id" in text
+    assert "cidr_blocks = var.private_subnet_cidrs" not in text
+
+
+def test_k8s_tls_secret_is_managed_externally():
+    text = (K8S / "secret.yaml").read_text()
+    assert "name: tsar-app-tls" in text
+    assert "type: kubernetes.io/tls" in text
+    assert "key: tsar/app/tls_crt" in text
+    assert "key: tsar/app/tls_key" in text
+    assert "-----BEGIN" not in text
+
+
+def test_k8s_deployment_marks_image_as_required_release_input():
+    text = (K8S / "deployment.yaml").read_text()
+    assert "REPLACE_WITH_VERIFIED_64_HEX_DIGEST" in text
+    assert "REPLACE_WITH_VERIFIED_64_HEX_DIGEST" in text
+
+
+def test_infra_workflow_validates_external_secret_with_pinned_schema():
+    text = (ROOT / ".github" / "workflows" / "infra-validation.yml").read_text()
+    assert "3eb90d47aba8d61919d4419dd38301536e32a94b" in text
+    assert "-ignore-missing-schemas" not in text
