@@ -1,7 +1,7 @@
 """Verify multi-cloud Terraform example structure."""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 MC = ROOT / "examples" / "secure" / "multi-cloud"
 
 def test_files_present():
