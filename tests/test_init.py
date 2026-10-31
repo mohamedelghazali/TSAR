@@ -63,3 +63,42 @@ def test_init_preserves_existing_custom_hook(tmp_path):
     assert "TSAR_DIR=" in wrapper
     assert "pre-commit.user-backup." in wrapper
     assert (tmp_path / ".tsar" / "pre-commit").exists()
+
+
+def test_init_preserves_existing_agent_file(tmp_path):
+    (tmp_path / "CLAUDE.md").write_text("# Project-specific instructions\nKeep these rules.\n")
+    r = run(["init", ".", "--agent", "claude"], cwd=tmp_path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (tmp_path / "CLAUDE.md").read_text() == (
+        "# Project-specific instructions\nKeep these rules.\n"
+    )
+
+
+def test_init_refresh_removes_stale_managed_files_and_keeps_backup(tmp_path):
+    old_tsar = tmp_path / ".tsar"
+    stale = old_tsar / "skills" / "obsolete-skill" / "old.py"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("stale")
+    (old_tsar / "operator-notes.txt").write_text("user data")
+
+    r = run(["init", ".", "--agent", "generic"], cwd=tmp_path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert not (tmp_path / ".tsar" / "skills" / "obsolete-skill").exists()
+    assert (tmp_path / ".tsar" / "operator-notes.txt").read_text() == "user data"
+
+    backups = list(tmp_path.glob(".tsar.backup.*"))
+    assert len(backups) == 1
+    assert (backups[0] / "skills" / "obsolete-skill" / "old.py").read_text() == "stale"
+
+
+def test_init_refresh_is_repeatable(tmp_path):
+    first = run(["init", ".", "--agent", "claude"], cwd=tmp_path)
+    assert first.returncode == 0, first.stdout + first.stderr
+    first_config = (tmp_path / ".tsar" / "config.json").read_text()
+
+    second = run(["init", ".", "--agent", "cursor"], cwd=tmp_path)
+    assert second.returncode == 0, second.stdout + second.stderr
+    assert (tmp_path / ".tsar" / "manifest.yaml").exists()
+    assert (tmp_path / ".tsar" / "config.json").read_text() != first_config
+    assert (tmp_path / "CLAUDE.md").exists()
+    assert not (tmp_path / ".cursorrules").exists() or (tmp_path / ".cursorrules").is_file()
