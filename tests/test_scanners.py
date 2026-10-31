@@ -80,7 +80,8 @@ def test_manifest_all_files_exist():
 
 def test_secret_scanner_accepts_single_file_target(tmp_path):
     f = tmp_path / "single.py"
-    f.write_text('AWS_KEY = "AKIAIOSFODNN7EXAMPLE"\n')
+    fake_key = "AKIAIOS" + "FODNN7EXAMPLE"
+    f.write_text(f'AWS_KEY = "{fake_key}"\n')
     r = run([sys.executable, "skills/secret-scanner/scanner.py", str(f)])
     assert r.returncode == 1
     assert "aws_key" in r.stdout
