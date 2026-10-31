@@ -73,3 +73,9 @@ def test_unchanged_sources_report_false_without_replacing_cache(tmp_path, monkey
 
     assert module.main() == 0
     assert "changed=false" in output.read_text(encoding="utf-8")
+
+
+def test_standards_cache_is_not_gitignored():
+    gitignore = SCRIPT.parents[1] / ".gitignore"
+    lines = [line.strip() for line in gitignore.read_text(encoding="utf-8").splitlines()]
+    assert ".tsar-cache/" not in lines
