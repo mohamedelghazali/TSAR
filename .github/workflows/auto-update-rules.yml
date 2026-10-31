@@ -21,7 +21,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install pyyaml
+        run: pip install pyyaml pytest
 
       - name: Test synchronization safety
         run: python -m pytest tests/test_sync_standards.py -q
@@ -36,7 +36,7 @@ jobs:
         id: changes
         shell: bash
         run: |
-          if git diff --quiet -- .tsar-cache manifest.yaml; then
+          if [[ -z "$(git status --porcelain --untracked-files=all -- .tsar-cache manifest.yaml)" ]]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No upstream fingerprint changes; no version bump or PR required."
           else
@@ -61,4 +61,7 @@ jobs:
             suite, and only then merge.
           branch: auto/tsar-sync
           commit-message: "chore(tsar): record upstream standards fingerprints"
+          add-paths: |
+            .tsar-cache/*.sha256
+            manifest.yaml
           delete-branch: true
