@@ -1,7 +1,4 @@
-# TSAR Security Governance Manifest
-# Every agent MUST fetch this file before generating code.
-
-version: "1.0.0"
+version: "1.1.0"
 last_updated: "2026-10-31"
 schema: "tsar/v1"
 repository: "https://github.com/mohamedelghazali/TSAR"
@@ -30,15 +27,29 @@ active_files:
     - "rules/crypto/post-quantum.md"
     - "rules/crypto/constant-time.md"
     - "rules/crypto/anti-patterns.md"
+  quantum:
+    - "rules/quantum/ml-kem.md"
+    - "rules/quantum/ml-dsa.md"
+    - "rules/quantum/slh-dsa.md"
+    - "rules/quantum/hybrid-design.md"
+    - "rules/quantum/key-rotation.md"
   ai_security:
     - "rules/owasp-llm/llm01-prompt-injection.md"
+    - "rules/owasp-llm/llm02-sensitive-info.md"
     - "rules/owasp-llm/llm03-excessive-agency.md"
     - "rules/owasp-llm/llm04-supply-chain.md"
+    - "rules/owasp-llm/llm05-data-poisoning.md"
+    - "rules/owasp-llm/llm06-excessive-permissions.md"
+    - "rules/owasp-llm/llm07-insecure-output.md"
     - "rules/owasp-llm/llm08-hidden-context.md"
+    - "rules/owasp-llm/llm09-misinformation.md"
+    - "rules/owasp-llm/llm10-unbounded-consumption.md"
+  agentic_ai:
     - "rules/agentic-ai/tool-scoping.md"
     - "rules/agentic-ai/memory-integrity.md"
     - "rules/agentic-ai/multi-agent-privilege.md"
     - "rules/agentic-ai/rag-security.md"
+  ai_models:
     - "rules/ai-models/training-pipeline.md"
     - "rules/ai-models/inference-security.md"
     - "rules/ai-models/model-supply-chain.md"
@@ -73,3 +84,147 @@ active_files:
     - "rules/data/pii-handling.md"
     - "rules/data/logging-redaction.md"
     - "rules/data/retention.md"
+    - "rules/data/database-encryption.md"
+    - "rules/data/backup-and-recovery.md"
+    - "rules/data/data-migration.md"
+    - "rules/data/secure-deletion.md"
+  blockchain:
+    - "rules/blockchain/solidity.md"
+    - "rules/blockchain/solana.md"
+    - "rules/blockchain/wallet-integration.md"
+  ml_ops:
+    - "rules/ml-ops/pipeline-security.md"
+    - "rules/ml-ops/feature-store.md"
+    - "rules/ml-ops/model-registry.md"
+  cloud:
+    - "rules/cloud/aws.md"
+    - "rules/cloud/gcp.md"
+    - "rules/cloud/azure.md"
+    - "rules/cloud/multi-cloud.md"
+  containers:
+    - "rules/containers/docker.md"
+    - "rules/containers/image-signing.md"
+    - "rules/containers/runtime-security.md"
+  api:
+    - "rules/api/rest.md"
+    - "rules/api/graphql.md"
+    - "rules/api/grpc.md"
+    - "rules/api/websocket.md"
+  iam:
+    - "rules/iam/design.md"
+    - "rules/iam/oauth2-oidc.md"
+    - "rules/iam/scim.md"
+    - "rules/iam/session-management.md"
+  supply_chain:
+    - "rules/supply-chain/sbom-slsa.md"
+    - "rules/supply-chain/dependency-integrity.md"
+    - "rules/supply-chain/artifact-signing.md"
+  messaging:
+    - "rules/messaging/kafka.md"
+    - "rules/messaging/rabbitmq.md"
+    - "rules/messaging/nats.md"
+    - "rules/messaging/pubsub.md"
+    - "rules/messaging/idempotency.md"
+    - "rules/messaging/poison-message.md"
+  database:
+    - "rules/database/postgresql.md"
+    - "rules/database/mysql.md"
+    - "rules/database/mongodb.md"
+    - "rules/database/redis.md"
+    - "rules/database/multi-tenant.md"
+    - "rules/database/replication.md"
+  observability:
+    - "rules/observability/metrics.md"
+    - "rules/observability/tracing.md"
+    - "rules/observability/logging.md"
+    - "rules/observability/alerting.md"
+  secrets:
+    - "rules/secrets/vault.md"
+    - "rules/secrets/aws-secrets-manager.md"
+    - "rules/secrets/sops.md"
+  networking:
+    - "rules/networking/dns.md"
+    - "rules/networking/mtls.md"
+    - "rules/networking/service-mesh.md"
+    - "rules/networking/waf.md"
+    - "rules/networking/zero-trust.md"
+    - "rules/networking/load-balancer.md"
+  compute:
+    - "rules/compute/serverless.md"
+    - "rules/compute/confidential-computing.md"
+  testing:
+    - "rules/testing/security-testing.md"
+    - "rules/testing/fuzzing.md"
+    - "rules/testing/chaos-engineering.md"
+    - "rules/testing/penetration-testing.md"
+  governance:
+    - "rules/governance/policy-as-code.md"
+    - "rules/governance/exception-management.md"
+    - "rules/governance/vendor-risk.md"
+    - "rules/governance/change-management.md"
+    - "rules/governance/risk-assessment.md"
+  privacy:
+    - "rules/privacy/data-minimization.md"
+    - "rules/privacy/anonymization.md"
+    - "rules/privacy/differential-privacy.md"
+    - "rules/privacy/consent.md"
+    - "rules/privacy/dsr.md"
+    - "rules/privacy/privacy-by-design.md"
+  threat_intel:
+    - "rules/threat-intel/stix-taxii.md"
+    - "rules/threat-intel/ioc-integration.md"
+    - "rules/threat-intel/detection-engineering.md"
+    - "rules/threat-intel/threat-hunting.md"
+  forensics:
+    - "rules/forensics/acquisition.md"
+    - "rules/forensics/chain-of-custody.md"
+    - "rules/forensics/analysis.md"
+  identity_federation:
+    - "rules/identity-federation/saml.md"
+    - "rules/identity-federation/oidc-federation.md"
+    - "rules/identity-federation/scim-provisioning.md"
+    - "rules/identity-federation/idp-hardening.md"
+  email:
+    - "rules/email/authentication.md"
+    - "rules/email/secure-gateway.md"
+    - "rules/email/encryption.md"
+    - "rules/email/anti-phishing.md"
+  endpoint:
+    - "rules/endpoint/edr.md"
+    - "rules/endpoint/mdm.md"
+    - "rules/endpoint/disk-encryption.md"
+    - "rules/endpoint/patch-management.md"
+    - "rules/endpoint/application-control.md"
+  backup:
+    - "rules/backup/strategy.md"
+    - "rules/backup/immutability.md"
+    - "rules/backup/air-gap.md"
+    - "rules/backup/ransomware-resilience.md"
+  disaster_recovery:
+    - "rules/disaster-recovery/planning.md"
+    - "rules/disaster-recovery/testing.md"
+    - "rules/disaster-recovery/failover.md"
+    - "rules/disaster-recovery/communications.md"
+  legal_hold:
+    - "rules/legal-hold/preservation.md"
+    - "rules/legal-hold/evidence-handling.md"
+    - "rules/legal-hold/privilege.md"
+  application_security:
+    - "rules/application-security/spa.md"
+    - "rules/application-security/csp.md"
+    - "rules/application-security/mobile-app.md"
+    - "rules/application-security/desktop-app.md"
+  infrastructure:
+    - "rules/infrastructure/hypervisor.md"
+    - "rules/infrastructure/container-orchestration.md"
+    - "rules/infrastructure/virtualization.md"
+  development:
+    - "rules/development/secure-sdlc.md"
+    - "rules/development/code-review.md"
+    - "rules/development/pair-programming.md"
+    - "rules/development/dependency-review.md"
+  emerging:
+    - "rules/emerging/advanced-ai-agents.md"
+    - "rules/emerging/quantum-safe-migration.md"
+    - "rules/emerging/iomt.md"
+    - "rules/emerging/autonomous-systems.md"
