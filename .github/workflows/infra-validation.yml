@@ -22,8 +22,8 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: hashicorp/setup-terraform@b75000b53e9ce4de2b4712237bbdb711bdc92aba
         with:
           terraform_version: '1.6.1'
       - name: Format Terraform
@@ -39,7 +39,7 @@ jobs:
       - name: Validate Terraform
         run: terraform -chdir=examples/secure/terraform validate
       - name: Upload generated provider lockfile
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@c2acdedd35a8824a1552c7137f8c18288c3ea469
         with:
           name: terraform-provider-lockfile
           path: examples/secure/terraform/.terraform.lock.hcl
@@ -48,7 +48,7 @@ jobs:
   kubernetes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Install checksum-verified kubeconform
         shell: bash
         run: |
