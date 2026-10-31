@@ -35,3 +35,17 @@ def test_sarif_clean(tmp_path):
     assert out.exists()
     data = json.loads(out.read_text())
     assert data["runs"][0]["results"] == []
+
+
+def test_sarif_includes_secret_scanner_findings(tmp_path):
+    (tmp_path / "credential.py").write_text('AWS_KEY = "AKIAIOSFODNN7EXAMPLE"\n')
+    out = tmp_path / "secrets.sarif"
+    r = subprocess.run(
+        [sys.executable, str(CLI), "scan", str(tmp_path),
+         "--format", "sarif", "--output", str(out)],
+        capture_output=True, text=True, cwd=ROOT,
+    )
+    assert r.returncode == 1
+    data = json.loads(out.read_text())
+    results = data["runs"][0]["results"]
+    assert any(result["ruleId"] == "tsar/aws_key" for result in results)
