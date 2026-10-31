@@ -1,11 +1,13 @@
 data "aws_iam_policy_document" "app_assume" {
   statement {
-    effect = "Allow"
+    effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
+
     principals {
       type        = "Federated"
       identifiers = [aws_iam_openid_connect_provider.eks.arn]
     }
+
     condition {
       test     = "StringEquals"
       variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
@@ -15,22 +17,23 @@ data "aws_iam_policy_document" "app_assume" {
 }
 
 resource "aws_iam_role" "app" {
-  name               = "tsar-app-${var.environment}"
-  assume_role_policy = data.aws_iam_policy_document.app_assume.json
+  name                 = "tsar-app-${var.environment}"
+  assume_role_policy   = data.aws_iam_policy_document.app_assume.json
   max_session_duration = 3600
 }
 
 data "aws_iam_policy_document" "app" {
   statement {
-    effect = "Allow"
+    effect  = "Allow"
     actions = [
       "s3:GetObject",
       "s3:PutObject",
     ]
     resources = ["${aws_s3_bucket.app.arn}/*"]
   }
+
   statement {
-    effect = "Allow"
+    effect  = "Allow"
     actions = [
       "kms:Decrypt",
       "kms:GenerateDataKey",
