@@ -18,11 +18,11 @@ tokens on demand.
 - Rotation automatic via OIDC token refresh.
 
 ## Deployment
-\`\`\`bash
+```bash
 terraform init
 terraform plan -var-file=prod.tfvars
 terraform apply -var-file=prod.tfvars
-\`\`\`
+```
 
 ## Requirements
 - AWS account with OIDC provider for EKS.
