@@ -9,7 +9,7 @@ resource "aws_db_instance" "app" {
   storage_type                        = "gp3"
   db_subnet_group_name                = aws_db_subnet_group.app.name
   parameter_group_name               = aws_db_parameter_group.app.name
-  master_username                    = "tsaradmin"
+  username                            = "tsaradmin"
   manage_master_user_password        = true
   vpc_security_group_ids              = [aws_security_group.rds.id]
   publicly_accessible                 = false
