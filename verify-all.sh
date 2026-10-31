@@ -34,10 +34,11 @@ check() {
 
 step "1. Python environment"
 python3 --version
-if pip install -q pyyaml pytest 2>/dev/null || pip3 install -q pyyaml pytest 2>/dev/null; then
+if python3 -c "import yaml, pytest" >/dev/null 2>&1; then
   echo -e "${GREEN}PASS${NC}: python_dependencies"
 else
   echo -e "${RED}FAIL${NC}: python_dependencies"
+  echo "Install the declared development dependencies with: python3 -m pip install -r requirements-dev.txt"
   FAILED=$((FAILED + 1))
 fi
 
