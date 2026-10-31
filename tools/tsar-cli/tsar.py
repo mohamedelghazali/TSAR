@@ -178,7 +178,8 @@ def cmd_init(args) -> int:
                     "#!/usr/bin/env bash\nset -euo pipefail\n"
                     + 'HOOK_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"\n'
                     + f'"$HOOK_DIR/{backup_name}" "$@"\n'
-                    + f'TSAR_DIR="{tsar_dir}" "$TSAR_DIR/pre-commit" "$@"\n'
+                    + f'export TSAR_DIR="{tsar_dir}"\n'
+                    + '"$TSAR_DIR/pre-commit" "$@"\n'
                 )
                 hook_destination.write_text(wrapper, encoding="utf-8")
                 hook_destination.chmod(0o755)
