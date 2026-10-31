@@ -1,13 +1,13 @@
 # TSAR Release Qualification
 
-This document records the repository evidence and owner decisions relevant to the current release. It distinguishes automated repository checks from external approvals and deployment validation.
+This document records repository evidence and owner decisions for the current 1.1.1 release line. It distinguishes automated repository checks from external approvals and deployment validation.
 
 ## Repository Snapshot
 
 - Repository: mohamedelghazali/TSAR
 - Default branch: main
+- Main commit reviewed: 06fdc76c4df4fcfce558d0ed4b39bd6397d3abf7
 - Snapshot reviewed: 2026-10-31
-- Main commit reviewed before this qualification update: f784a16c135f47c6665fef1554afabf67d2d11f9
 - Repository visibility: public
 - Repository description: aligned with the AI security governance identity.
 - Active main-branch rulesets: one (TSAR-Main-Protection).
@@ -28,16 +28,17 @@ The rule-file count is an inventory measure. It does not mean that every individ
 
 ## CI Evidence
 
-On the reviewed main commit f784a16c135f47c6665fef1554afabf67d2d11f9, these push workflows completed successfully:
+The complete release gate passed on main commit 06fdc76c4df4fcfce558d0ed4b39bd6397d3abf7:
 
-- [TSAR Self-Test — 41238606312](https://github.com/mohamedelghazali/TSAR/actions/runs/41238606312)
-- [TSAR Orchestrator — 41238606310](https://github.com/mohamedelghazali/TSAR/actions/runs/41238606310)
-- [Infrastructure Validation — 41238606307](https://github.com/mohamedelghazali/TSAR/actions/runs/41238606307)
-- [TSAR Validate Rules — 41238606299](https://github.com/mohamedelghazali/TSAR/actions/runs/41238606299)
+- [TSAR Complete Release Gates — 41241714329](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714329) — success; complete verify-all.sh suite.
+- [TSAR Self-Test — 41241714325](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714325) — success.
+- [Infrastructure Validation — 41241714482](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714482) — success.
+- [TSAR Validate Rules — 41241714327](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714327) — success.
+- [TSAR Orchestrator — 41241714307](https://github.com/mohamedelghazali/TSAR/actions/runs/41241714307) — success.
 
-PR #16 also passed its configured pull-request checks before merge. However, the complete verify-all.sh workflow was path-filtered and did not run for that README-only change. This qualification update removes that path filter, adds push on main and workflow_dispatch, and makes the full release gate run for all pull requests and main-branch updates.
+The complete verification log reports **186 pytest tests passed**, successful rule linting, compliance-reference checks, secret scanning with no secrets found, orchestrator and report generation, OPA policy checks, LSP build, and Terraform validation. The separate infrastructure workflow also passed Terraform static validation and Kubernetes schema validation.
 
-A successful workflow must be checked on the exact commit being qualified. Do not reuse older run IDs as evidence for a newer commit.
+The release-gates workflow now runs on every pull request to main, every push to main, and manual dispatch. This prevents a path filter from silently omitting the full release gate on documentation-only or other changes.
 
 ## Agent Integration and Enforcement Scope
 
@@ -60,7 +61,7 @@ The ruleset currently requires **zero approving reviews**. PR-based changes are 
 
 ## Owner Decisions and External Workstreams
 
-- **AWS workstream:** accepted as complete by the project owner. This records the owner's project decision; the repository's static Terraform and Kubernetes checks are not represented as live AWS/EKS deployment evidence.
+- **AWS workstream:** accepted as complete by the project owner. This records the owner's project decision; repository static Terraform and Kubernetes checks are not represented as live AWS/EKS deployment evidence.
 - **License review:** the project owner confirms that the license was reviewed with an advisor and approved. This record reflects that owner confirmation; it is not an independent legal opinion.
 - The repository retains its custom source-available license. It is not an OSI-approved Open Source license. Commercial use remains subject to the written authorization and commercial licensing terms in LICENSE.
 
@@ -70,14 +71,12 @@ The ruleset currently requires **zero approving reviews**. PR-based changes are 
 - No Git tags or GitHub Releases were present in the reviewed repository.
 - The v2.0 roadmap is proposed work, not the current implementation.
 - Do not publish v2.0.0 from the current 1.1.1 codebase.
-- A stable v1.1.1 release may be created only after the complete verify-all.sh release gate passes on the exact final main commit and the release contents are checked against the 1.1.1 changelog.
+- The repository is technically qualified for a **v1.1.1** release, subject to a final check that the release tag points to the exact tested main tree and that the release notes match CHANGELOG.md.
 
 ## Qualification Decision
 
-**Repository readiness: conditionally qualified for the 1.1.1 release line.**
+**Repository qualification: PASS for the 1.1.1 release line.**
 
-The repository inventory is consistent, the current required CI workflows passed on the reviewed main commit, one main-branch ruleset is active, and the project owner has confirmed the AWS and license workstreams as complete.
-
-**Remaining automated gate:** a fresh full verify-all.sh run on the exact final commit. The release-gates workflow is being updated to run for every PR and every push to main, rather than only selected file paths. Do not create the stable tag or GitHub Release until that run succeeds.
+The inventory is consistent, the complete release gate passed, the required CI workflows passed, one main-branch ruleset is active, and the project owner has confirmed the AWS and license workstreams as complete.
 
 This qualification does not certify the absence of vulnerabilities, provider prompt compliance, regulatory compliance, or live cloud deployment behavior.
