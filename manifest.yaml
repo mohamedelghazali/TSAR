@@ -1,0 +1,55 @@
+# TSAR Security Governance Manifest
+# Every agent MUST fetch this file before generating code.
+
+version: "1.0.0"
+last_updated: "2026-10-31"
+schema: "tsar/v1"
+repository: "https://github.com/mohamedelghazali/TSAR"
+
+lifecycle:
+  check_url: "https://raw.githubusercontent.com/mohamedelghazali/TSAR/main/manifest.yaml"
+  fetch_before_task: true
+  reload_on_version_mismatch: true
+  cache_ttl_hours: 6
+  fail_closed: true
+
+enforcement:
+  default_mode: "strict"
+  allow_advisory_fallback: false
+
+active_files:
+  core:
+    - "system/CORE_DIRECTIVE.md"
+    - "system/DO_NOT_GENERATE.md"
+    - "system/ENFORCEMENT_LEVELS.md"
+    - "system/LIFECYCLE.md"
+  crypto:
+    - "rules/crypto/algorithms.md"
+    - "rules/crypto/key-management.md"
+    - "rules/crypto/nonce-and-aead.md"
+    - "rules/crypto/post-quantum.md"
+    - "rules/crypto/constant-time.md"
+    - "rules/crypto/anti-patterns.md"
+  ai_security:
+    - "rules/owasp-llm/llm01-prompt-injection.md"
+    - "rules/owasp-llm/llm03-excessive-agency.md"
+    - "rules/owasp-llm/llm04-supply-chain.md"
+    - "rules/owasp-llm/llm08-hidden-context.md"
+    - "rules/agentic-ai/tool-scoping.md"
+    - "rules/agentic-ai/memory-integrity.md"
+  platform:
+    - "rules/platform/web.md"
+    - "rules/platform/mobile-ios.md"
+    - "rules/platform/mobile-android.md"
+    - "rules/platform/embedded-firmware.md"
+    - "rules/platform/distributed-systems.md"
+    - "rules/platform/serverless-edge.md"
+  hardware:
+    - "rules/hardware/tpm.md"
+    - "rules/hardware/hsm.md"
+    - "rules/hardware/secure-enclave.md"
+    - "rules/hardware/secure-boot.md"
+    - "rules/hardware/side-channel.md"
+  data:
+    - "rules/data/pii-handling.md"
+    - "rules/data/logging-redaction.md"
