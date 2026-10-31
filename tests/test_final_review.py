@@ -3,7 +3,7 @@ import re
 import yaml
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 
 def test_readme_exists():
     assert (ROOT / "README.md").exists()
