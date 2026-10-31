@@ -18,16 +18,20 @@ def run_py(script: Path, *args: str) -> int:
     return subprocess.call([sys.executable, str(script), *args])
 
 def cmd_scan(args) -> int:
+    target = Path(args.path).expanduser()
+    if not target.exists() or not (target.is_file() or target.is_dir()):
+        print(f"Invalid scan target: {target}", file=sys.stderr)
+        return 2
     if args.format == "sarif":
         sys.path.insert(0, str(SKILLS / "secure-review"))
         import importlib
         review_mod = importlib.import_module("review")
-        findings = review_mod.review(Path(args.path))
+        findings = review_mod.review(target)
         sys.path.insert(0, str(SKILLS / "secret-scanner"))
         secret_mod = importlib.import_module("scanner")
         findings.extend(
             (path, line, kind, "HIGH", "Potential secret or credential detected.")
-            for path, line, kind in secret_mod.scan(Path(args.path))
+            for path, line, kind in secret_mod.scan(target)
         )
         sys.path.insert(0, str(TOOLS / "tsar-cli"))
         import sarif as sarif_mod
