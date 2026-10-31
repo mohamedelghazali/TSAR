@@ -1,6 +1,6 @@
 # TSAR Instructions for Replit Agent
 
-Fetch TSAR manifest before starting:
+Fetch TSAR `manifest.yaml` and load `system/CORE_DIRECTIVE.md` before starting:
 https://raw.githubusercontent.com/mohamedelghazali/TSAR/main/manifest.yaml
 
 Constraints:
