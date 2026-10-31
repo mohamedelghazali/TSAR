@@ -1,0 +1,25 @@
+name: TSAR Enforce on PR
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Secure review on changed code
+        run: |
+          python skills/secure-review/review.py . || {
+            echo "Secure review failed; PR blocked."
+            exit 1
+          }
+
+      - name: Secret scan
+        run: |
+          python skills/secret-scanner/scanner.py . || {
+            echo "Secrets detected; PR blocked."
+            exit 1
+          }
