@@ -54,3 +54,23 @@ jobs:
           -schema-location default
           -schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/3eb90d47aba8d61919d4419dd38301536e32a94b/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
           examples/secure/kubernetes/
+
+  infrastructure-validation:
+    name: Infrastructure Validation
+    if: always()
+    needs:
+      - terraform
+      - kubernetes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both infrastructure validations
+        env:
+          TERRAFORM_RESULT: ${{ needs.terraform.result }}
+          KUBERNETES_RESULT: ${{ needs.kubernetes.result }}
+        run: |
+          if [ "$TERRAFORM_RESULT" != "success" ] || [ "$KUBERNETES_RESULT" != "success" ]; then
+            echo "Terraform: $TERRAFORM_RESULT"
+            echo "Kubernetes: $KUBERNETES_RESULT"
+            exit 1
+          fi
+          echo "Terraform and Kubernetes static validation passed."
