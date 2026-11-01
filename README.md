@@ -35,6 +35,136 @@ npx skills update -g
 
 **Important:** the URL is a discovery and onboarding entry point, not executable code. A model can perform installation only if its environment provides shell/tool access and the necessary permissions. Global skill installation does not force every model to load TSAR on every turn, nor does it modify model training or provider-level system prompts. See [persistence boundaries](docs/universal-agent-onboarding.md#persistence-boundaries).
 
+## How to Adopt TSAR in Your AI Agent
+
+Use this short bootstrap prompt in your AI agent's chat, project instructions, or supported global-instructions setting:
+
+```text
+Adopt TSAR as your security-governance framework for all relevant software engineering, coding, architecture, infrastructure, and cybersecurity tasks.
+
+Official repository: https://github.com/mohamedelghazali/TSAR
+
+1. Read AGENTS.md, manifest.yaml, and docs/universal-agent-onboarding.md.
+2. Review the core directives: system/CORE_DIRECTIVE.md, system/DO_NOT_GENERATE.md, system/ENFORCEMENT_LEVELS.md, and system/LIFECYCLE.md.
+3. If shell access and permission are available, install compatible skills with:
+   npx skills add mohamedelghazali/TSAR -g --all
+4. Configure supported persistent agent or project instructions using prompts/global-bootstrap.md. Preserve existing user settings.
+5. Verify what was installed, configured, and loaded. Report unsupported agents and incomplete steps.
+6. Apply relevant TSAR rules and skills proactively; scan, review, and verify engineering changes before delivery.
+7. Check the upstream version and update installed skills when appropriate.
+
+Operating cycle:
+CONSULT → CLASSIFY → DESIGN → IMPLEMENT → SCAN → REVIEW → VERIFY → REPORT
+
+Treat TSAR as the standing security reference within your actual platform permissions. Never claim installation, persistence, enforcement, or verification unless performed and confirmed. If installation is unavailable, apply relevant directives in the current session and state the limitation.
+```
+
+The prompt requests adoption; it does not itself install software or override provider system instructions. For the complete procedure, see [Universal Agent Onboarding](docs/universal-agent-onboarding.md).
+
+## Deployment Modes: Local or Agent-Based
+
+TSAR can be adopted in two complementary ways:
+
+### 1. Local Installation on Your Device
+
+Install TSAR skills and tools in your local development environment. Compatible agents can discover and use the installed skills across supported projects. You can also run TSAR scanners, CLI tools, hooks, and verification scripts directly on your machine.
+
+```bash
+npx skills add mohamedelghazali/TSAR -g --all
+npx skills ls -g
+```
+
+### 2. Direct Adoption by Your AI Agent
+
+Give your agent the TSAR repository URL and the [adoption prompt above](#how-to-adopt-tsar-in-your-ai-agent). The agent reads the governance directives and applicable rules, then configures supported project or persistent instructions and verifies its actual capabilities.
+
+This mode can work without a local global installation when the agent can access repository files. Persistent adoption depends on the agent platform's supported configuration features. A chat-only agent without shell or configuration access can apply the relevant rules in the current session, but cannot install local skills or guarantee persistence across future sessions.
+
+These modes can be combined: use agent instructions for secure generation and local scanners/CI for independent verification.
+
+## Supported AI Agents
+
+TSAR currently provides dedicated prompt or instruction integrations for:
+
+- Claude and Claude Code
+- GPT / ChatGPT
+- DeepSeek-Coder
+- Qwen-Coder
+- Gemini
+- Llama
+- Cursor
+- GitHub Copilot
+- Manus
+- Windsurf
+- SuperNinja
+- Replit Agent
+- Devin
+- Kimi
+
+**Compatibility note:** support means TSAR provides an agent-specific prompt/instruction path or documented fallback; it does not mean every product supports global skill installation. Available capabilities vary by product, plan, runtime, and permissions. Check the [Agent Compatibility Matrix](docs/agent-compatibility-matrix.md) before choosing an installation method.
+
+## Local Development and Pre-Push Verification
+
+Run security and quality checks locally before committing and pushing changes.
+
+### 1. Prepare the environment
+
+Install the declared development dependencies:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+### 2. Inspect the working tree
+
+```bash
+git status
+git diff --check
+git diff
+```
+
+### 3. Run the full verification suite
+
+From Linux, macOS, Git Bash, or WSL:
+
+```bash
+bash ./verify-all.sh
+```
+
+On Windows PowerShell, run the following core checks individually (the full script requires a Bash-compatible environment):
+
+```powershell
+py -3 -m pip install -r requirements-dev.txt
+py -3 scripts/lint_rules.py
+py -3 scripts/check-no-empty-files.py
+py -3 skills/secret-scanner/scanner.py .
+py -3 skills/secure-review/review.py examples/secure
+py -3 skills/crypto-inventory/inventory.py examples/secure
+py -3 -m pytest tests/ -q
+git diff --check
+```
+
+The full verification script also checks manifest integrity, anti-pattern detection, compliance references, orchestration, reporting, and optional OPA, LSP, and Terraform integrations. Optional checks may be skipped when their tools are unavailable; a skipped check is not a pass.
+
+### 4. Fix findings and repeat
+
+Do not proceed while a required check is failing. Fix the underlying issue and rerun the relevant check, then rerun the full suite.
+
+### 5. Review and push
+
+```bash
+git status --short
+git diff --stat
+git diff
+git add .
+git commit -m "Describe the verified change"
+git push origin HEAD
+```
+
+Open a Pull Request and wait for independent CI validation and review before merging.
+
+**Pre-push principle:** local verification is a prerequisite, not a replacement for CI or human review. Never report a check as passed unless its result was observed.
+
 ## Coverage
 
 - **171 active rule files** across **37 rule domains** (rules/blockchain/README.md is an overview file, not a rule).
@@ -57,13 +187,9 @@ TSAR uses multiple enforcement layers:
 
     git clone https://github.com/mohamedelghazali/TSAR.git
     cd TSAR
-    ./tools/tsar-cli/tsar.py init /path/to/project --agent cursor
+    python ./tools/tsar-cli/tsar.py init /path/to/project
     ./tools/tsar-cli/tsar.py scan /path/to/project
     ./tools/tsar-orchestrator/orchestrator.py /path/to/project
-
-## Supported Agents
-
-Claude, Claude Code, GPT, DeepSeek-Coder, Qwen-Coder, Gemini, Llama, Cursor, GitHub Copilot, Manus, Windsurf, SuperNinja, Replit Agent, Devin, Kimi.
 
 ## Structure
 
