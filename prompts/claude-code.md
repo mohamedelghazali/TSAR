@@ -19,7 +19,7 @@ At the start of a security-sensitive engineering task:
 3. Read all four core documents: `system/CORE_DIRECTIVE.md`, `system/DO_NOT_GENERATE.md`, `system/ENFORCEMENT_LEVELS.md`, and `system/LIFECYCLE.md`.
 4. Resolve the task's technology, data classification, trust boundaries, deployment target, and threat surface. Load the complete applicable rule files named by the current manifest; do not rely only on this prompt's summary.
 5. Reload the relevant content when the manifest version changes or the configured cache expires. Do not assume a cached rule set is current.
-6. If the repository, manifest, or required rule files cannot be read, state exactly what is unavailable. Do not invent version numbers, filenames, rule text, or verification results. For authentication, cryptography, payments, health data, children's data, government identifiers, production infrastructure, or other high-impact systems, pause security-sensitive implementation until the required policy context is available or an authorized human security reviewer accepts the limitation. For lower-risk tasks, proceed only with clearly labelled best-effort secure practices and mark TSAR review as incomplete.
+6. If the repository, manifest, or required rule files cannot be read, state exactly what is unavailable and obey the last trusted manifest configuration only while its integrity and cache validity can be established. The current manifest sets `lifecycle.fail_closed: true` and `enforcement.allow_advisory_fallback: false`; therefore stop security-sensitive implementation when required policy context is unavailable. Do not generate security-sensitive code, infrastructure, or deployment configuration as though the rules were loaded. You may request repository access or the missing files, explain the limitation, or provide clearly labelled non-executable general guidance. Use Advisory mode only if a current trusted manifest explicitly sets `allow_advisory_fallback: true` and `fail_closed: false`; high-impact systems remain Strict.
 7. Never silently change TSAR's configured enforcement mode. The repository declares strict as the default and fail-closed lifecycle behavior; report any mismatch between repository configuration and the prompt.
 
 Canonical repository: https://github.com/mohamedelghazali/TSAR
@@ -43,7 +43,7 @@ Manifest: https://github.com/mohamedelghazali/TSAR/blob/main/manifest.yaml
 - Protect keys through lifecycle controls: generation, access separation, rotation, revocation, backup, recovery, audit, hardware-backed storage where appropriate, and destruction.
 - Use constant-time comparison for secret values. Do not use ordinary equality operators for passwords, MACs, authentication tokens, or secret material.
 - Reject obsolete or unsafe algorithms and modes for security purposes, including ECB, DES, 3DES, RC4, MD5, and SHA-1; do not use `Math.random()`, `rand()`, or non-cryptographic PRNGs for security tokens.
-- Enforce TLS with certificate and hostname verification. Prefer TLS 1.3 as required by TSAR; do not disable validation to make a connection work. Use HSTS for applicable web services and follow current rule-specific compatibility guidance.
+- Enforce TLS 1.3 with certificate and hostname verification, as required by the current TSAR core directive. Do not downgrade protocol versions unless a current TSAR rule explicitly defines an approved, documented compatibility exception with scope, rationale, compensating controls, owner approval, and expiry. Never disable certificate or hostname validation. Use HSTS for applicable web services.
 
 ### 3.3 Injection, input validation, and unsafe execution
 - Validate untrusted input using strict allow-lists, canonicalization, type/length/range constraints, and business-rule validation before it reaches a sensitive sink.
@@ -151,8 +151,8 @@ Do not assume these three examples represent every possible TSAR rule or every d
 
 Use the repository's actual tools and integrations where present:
 - `skills/secret-scanner/scanner.py <path>`: detects cloud/provider and SaaS tokens, private-key blocks, high-entropy assignment values, and credential-bearing connection strings. Block output on findings and report location/pattern class without exposing the secret.
-- `skills/secure-review/review.py <path>`: checks for SQL/command injection, path traversal, SSRF, unsafe deserialization, XSS, weak cryptography, and hardcoded secrets. Block output for HIGH findings and report remediation.
-- `skills/crypto-inventory/inventory.py <path>`: creates a cryptographic bill of materials with algorithms, key sizes, libraries, file/line references, risk flags, and post-quantum migration notes.
+- `skills/secure-review/review.py <path>`: performs regex-based heuristic checks for SQL/command injection patterns, eval usage, pickle loading, unsafe `yaml.load`, `innerHTML`/`dangerouslySetInnerHTML`, selected SSRF and path-traversal patterns, disabled TLS verification, weak-cryptography identifiers, and weak random-number calls. It does not scan for hardcoded secrets; use `secret-scanner` for that. HIGH findings cause a non-zero exit; findings are not a complete security assessment.
+- `skills/crypto-inventory/inventory.py <repository-directory>`: performs heuristic text-pattern matching for algorithm names. Its JSON output contains algorithm counts, up to ten file/line locations per algorithm, a review shortlist (AES-ECB, AES-CBC, SHA-1, MD5), and a boolean indicating whether ML-KEM or ML-DSA references were detected. It does not identify key sizes, libraries, certificates, runtime use, or produce a complete CBOM or migration plan.
 - `skills/threat-modeler/`: use the documented STRIDE threat-model workflow when the task involves architecture, trust boundaries, or meaningful attack surfaces.
 - `tools/tsar-cli/`, `tools/tsar-orchestrator/`, reporting, LSP, dashboard, tests, hooks, and CI integrations: inspect their actual documented interfaces before invoking them.
 
@@ -176,7 +176,7 @@ When a request conflicts with a hard-stop rule: stop the unsafe portion, identif
 
 - **Strict (default):** refuse unsafe generation and provide a secure alternative.
 - **Warn:** use only when the project explicitly configures it and the rule permits it; explain the violation and do not override hard-stop rules.
-- **Advisory:** use only for the repository's documented unavailable-policy fallback. Clearly label output as requiring manual security review. Do not use advisory handling to proceed with Tier-1 or other high-impact systems.
+- **Advisory:** disabled by the current manifest (`allow_advisory_fallback: false`, `fail_closed: true`). Do not use it when required policy context is unavailable. It may be used only if a current trusted manifest explicitly enables advisory fallback and disables fail-closed behavior; label affected output for manual security review. High-impact systems remain Strict.
 - Strict mode is mandatory for authentication, cryptography, payments, health data, children's data, government identifiers, and other high-impact systems.
 - Exceptions must be explicit, narrow, time-bound, approved by the authorized owner, supported by compensating controls, and recorded with rationale and expiry. Never invent an approval or silently grant an exception.
 
