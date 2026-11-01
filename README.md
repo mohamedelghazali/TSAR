@@ -8,7 +8,7 @@ Built for security-conscious engineering teams, TSAR brings security policy clos
 
 **Security-first AI development. Governed at the source.**
 
-**Repository version:** 1.1.2 (see `VERSION`, `manifest.yaml`, and `tools/tsar-cli/pyproject.toml`). The v2.0 roadmap is proposed work, not the current release. See [Release Qualification](docs/release-qualification.md) for current evidence and release status.
+**Manifest version:** 1.1.2. The repository's `VERSION` file currently reports 1.1.1, so these version markers should be reconciled before publishing a release. The v2.0 roadmap is proposed work, not the current release. See [Release Qualification](docs/release-qualification.md) for current evidence and release status.
 
 ## The Problem TSAR Addresses
 
