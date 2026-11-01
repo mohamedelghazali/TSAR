@@ -1,5 +1,5 @@
-version: "1.1.2"
-last_updated: "2026-10-31"
+version: "1.1.3"
+last_updated: "2026-11-01"
 schema: "tsar/v1"
 repository: "https://github.com/mohamedelghazali/TSAR"
 

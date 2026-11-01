@@ -28,7 +28,9 @@ Select the exact TSAR instruction file for the agent or model you use. Every sup
 
 **Important source-of-truth rule:** the agent files explain the complete governance scope, but the detailed technical requirements remain in the current files listed by `manifest.yaml`. For each task, the agent must read the complete applicable rule files rather than treating the prompt's domain descriptions as a replacement for those rules. Do not paste all 171 active rule files into every model prompt; load the relevant authoritative files dynamically from the manifest. This keeps the agent instructions comprehensive while ensuring that rule updates are taken from the current source.
 
-**Important:** these files provide agent-specific instructions; they do not install privileged controls inside a model or guarantee that the model will follow every rule. They cannot override provider-level system instructions or platform permissions. For stronger verification, combine them with TSAR's scanners, hooks, tests, policy checks, and CI checks.
+**Enforcement behavior:** the current `manifest.yaml` sets `lifecycle.fail_closed: true` and `enforcement.allow_advisory_fallback: false`. If the manifest or required policy files cannot be accessed and no trusted, valid local copy is available, agents must stop security-sensitive implementation rather than silently switching to Advisory mode. Advisory fallback is permitted only if a future trusted manifest explicitly enables it and disables fail-closed behavior.
+
+**Important:** these files provide agent-specific instructions; they do not install privileged controls inside a model or guarantee that the model will follow every rule. They cannot override provider-level system instructions or platform permissions. For stronger verification, combine them with TSAR's scanners, hooks, tests, policy checks, and CI checks. Tool descriptions are intentionally limited to the checks implemented by the current scripts; heuristic scanners can miss issues and produce false positives.
 
 For the complete support scope and limitations, see the [Agent Compatibility Matrix](agent-compatibility-matrix.md) and [Agent Integration Guide](agent-integration.md).
 
@@ -64,7 +66,7 @@ python skills/crypto-inventory/inventory.py .
 
 ## 6. Update Rules
 
-The manifest version changes when upstream standards update. The agent reloads automatically on version mismatch. To update manually:
+The manifest version changes when the project updates its rule inventory. The agent instructions require a version and cache-freshness check and a reload of the applicable files when a mismatch is detected, provided the agent has repository access. This is an instruction, not a provider-enforced automatic update. To update manually:
 
 ```bash
 git pull
