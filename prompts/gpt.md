@@ -1,7 +1,7 @@
 # TSAR Rules for GPT-based Agents
 
 Before any task, fetch:
-https://raw.githubusercontent.com/mohamedelghazali/TSAR/main/manifest.yaml
+https://github.com/mohamedelghazali/TSAR/raw/refs/heads/main/manifest.yaml
 
 Reload active files if version mismatch.
 
