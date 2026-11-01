@@ -1,7 +1,37 @@
-cbom.json
+# Python and local tooling
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and OS files
 .idea/
 .vscode/
 .DS_Store
+
+# Local secrets and private key material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Terraform local state and plans
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Generated security inventory
+cbom.json
