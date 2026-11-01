@@ -10,6 +10,16 @@ def run(args, cwd):
     return subprocess.run([sys.executable, str(CLI), *args],
                           capture_output=True, text=True, cwd=cwd)
 
+def test_init_defaults_to_universal_instructions(tmp_path):
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "hooks").mkdir()
+    r = run(["init", str(tmp_path)], cwd=tmp_path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (tmp_path / "AGENTS.md").exists()
+    cfg = (tmp_path / ".tsar" / "config.json").read_text(encoding="utf-8")
+    assert '"agent": "generic"' in cfg
+
+
 def test_init_claude(tmp_path):
     (tmp_path / ".git").mkdir()
     (tmp_path / ".git" / "hooks").mkdir()

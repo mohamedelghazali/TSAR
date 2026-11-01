@@ -187,7 +187,7 @@ TSAR uses multiple enforcement layers:
 
     git clone https://github.com/mohamedelghazali/TSAR.git
     cd TSAR
-    ./tools/tsar-cli/tsar.py init /path/to/project --agent cursor
+    python ./tools/tsar-cli/tsar.py init /path/to/project
     ./tools/tsar-cli/tsar.py scan /path/to/project
     ./tools/tsar-orchestrator/orchestrator.py /path/to/project
 
