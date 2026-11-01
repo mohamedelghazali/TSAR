@@ -1,6 +1,8 @@
 """Fail-closed tests for upstream standards synchronization."""
 import hashlib
 import importlib.util
+import io
+import urllib.error
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "sync_standards.py"
@@ -12,6 +14,59 @@ def load_sync_module():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def test_nist_source_uses_authoritative_nist_domain():
+    module = load_sync_module()
+    assert module.UPSTREAM["nist-ai-rmf"] == (
+        "https://www.nist.gov/itl/ai-risk-management-framework"
+    )
+
+
+def test_fetch_retries_transient_http_errors_and_sends_user_agent(monkeypatch):
+    module = load_sync_module()
+    calls = []
+
+    def fake_urlopen(request, timeout):
+        calls.append((request, timeout))
+        assert request.get_header("User-agent").startswith("TSAR-Standards-Sync/")
+        assert timeout == 30
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(
+                request.full_url, 503, "Service Unavailable", hdrs=None, fp=None
+            )
+        return io.BytesIO(b"official standards")
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+
+    assert module.fetch("https://example.test/standards") == b"official standards"
+    assert len(calls) == 2
+
+
+def test_fetch_does_not_retry_permanent_not_found(monkeypatch):
+    module = load_sync_module()
+    calls = []
+
+    def fake_urlopen(request, timeout):
+        calls.append(request)
+        raise urllib.error.HTTPError(
+            request.full_url, 404, "Not Found", hdrs=None, fp=None
+        )
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        module.time, "sleep",
+        lambda _seconds: (_ for _ in ()).throw(AssertionError("must not retry 404")),
+    )
+
+    try:
+        module.fetch("https://example.test/missing")
+    except urllib.error.HTTPError as exc:
+        assert exc.code == 404
+    else:
+        raise AssertionError("HTTP 404 must be raised")
+    assert len(calls) == 1
 
 
 def test_fetch_failure_does_not_modify_existing_cache(tmp_path, monkeypatch):
