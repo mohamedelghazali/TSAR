@@ -1,3 +1,8 @@
+---
+name: crypto-inventory
+description: Build a cryptographic bill of materials for a repository by identifying cryptographic algorithms, key sizes, libraries, certificates, and deprecated or risky cryptographic usage. Use when auditing cryptography, planning post-quantum migration, or reviewing cryptographic dependencies.
+---
+
 # Crypto Inventory Skill
 
 ## Purpose

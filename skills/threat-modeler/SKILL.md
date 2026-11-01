@@ -1,3 +1,8 @@
+---
+name: threat-modeler
+description: Create STRIDE threat models from system architectures, data flows, assets, trust boundaries, actors, and privileges. Use when designing systems, reviewing architecture, assessing attack surfaces, or planning security mitigations.
+---
+
 # Threat Modeler Skill
 
 ## Purpose
