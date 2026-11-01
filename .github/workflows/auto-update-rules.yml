@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
+  # Exercise the sync pipeline whenever its implementation or configuration changes.
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/sync_standards.py'
+      - '.github/workflows/auto-update-rules.yml'
+      - 'tests/test_sync_standards.py'
 
 permissions:
   contents: write
@@ -12,6 +19,7 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # v4
         with:
