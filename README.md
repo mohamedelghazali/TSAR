@@ -8,8 +8,6 @@ Built for security-conscious engineering teams, TSAR brings security policy clos
 
 **Security-first AI development. Governed at the source.**
 
-**Manifest version:** 1.1.2. The repository's `VERSION` file currently reports 1.1.1, so these version markers should be reconciled before publishing a release. The v2.0 roadmap is proposed work, not the current release. See [Release Qualification](docs/release-qualification.md) for current evidence and release status.
-
 ## The Problem TSAR Addresses
 
 AI coding agents can generate code quickly, but their output is not automatically aligned with an organization's security requirements. Security guidance may be scattered across team documents, prompt files, code-review checklists, and CI configuration. This creates several practical gaps:
@@ -24,75 +22,85 @@ TSAR addresses these gaps by organizing security requirements into a versioned, 
 
 ## What TSAR Is — and Is Not
 
-TSAR is a **security-governance framework for AI-assisted engineering**. It combines:
+TSAR is a **modular security engineering and governance framework for AI-assisted software development**. It brings policy definition, domain-specific security knowledge, agent integration, code inspection, policy-as-code examples, developer tooling, and repository-level automation into one coordinated system.
 
-1. **Core directives** that describe baseline security expectations and prohibited patterns.
-2. **A versioned rule inventory** that organizes domain-specific requirements and identifies the active rule files.
-3. **Agent instruction packs** that help supported coding agents consult and apply relevant TSAR guidance.
-4. **Local tools and skills** that inspect code, identify selected risk patterns, build inventories, and produce findings.
-5. **Repository integrations** that can run checks during development and CI.
+Its capabilities span:
 
-TSAR is not a trained AI model, an autonomous security authority, or a replacement for a security team. It does not modify model weights, override a provider's system instructions, or create privileged enforcement inside an AI platform. Agent instructions are guidance; reliable enforcement requires executable checks, correctly configured repository controls, and human review.
+1. **Security policy architecture:** core directives, prohibited-pattern catalogs, enforcement levels, and lifecycle requirements establish a consistent baseline for engineering work.
+2. **Domain security knowledge base:** a structured inventory of active rules across 37 security domains gives teams reusable requirements for application, cloud, infrastructure, cryptography, identity, and other engineering areas.
+3. **Multi-agent integration:** dedicated instruction packs and a universal onboarding path connect the same governance model to 15 AI coding-agent environments.
+4. **Operational security tooling:** skills, scanners, CLI utilities, orchestration, reporting, and language-server components help teams inspect code, inventory cryptographic usage, detect exposed secrets, conduct secure reviews, and structure threat-modeling work.
+5. **Policy and delivery integration:** policy-as-code examples, repository hooks, CI workflows, tests, and validation scripts bring security checks into the development and pull-request lifecycle.
+
+The result is more than a prompt collection: TSAR is a reusable security engineering system that connects standards and rules to developer workflows and technical verification. It does not modify model weights or override a provider's system instructions; its strength comes from combining agent-aware governance with independently executable checks and repository controls.
 
 ## Why TSAR Is Designed This Way
 
-The design separates policy, domain knowledge, agent integration, and verification instead of placing every requirement in one large prompt.
+The architecture is intentionally modular: TSAR treats security governance as an engineering lifecycle, not as a paragraph appended to a coding prompt. Policy, domain rules, agent interfaces, verification engines, and delivery controls are maintained as distinct but connected components. This separation makes the framework extensible, auditable, and practical to integrate into different teams and toolchains.
 
-| Design choice | Engineering reason |
+| Design decision | Engineering value |
 |---|---|
-| Core directives are separate from domain rules | Keep baseline requirements stable while allowing domain-specific guidance to evolve. |
-| `manifest.yaml` inventories active rules and version information | Make the rule set discoverable, reviewable, and easier to validate for drift. |
-| Agent prompts are separate from security rules | Support different agent instruction formats without duplicating the underlying policy. |
-| Skills and scanners are executable tools | Check selected code patterns independently of what an agent says it has done. |
-| Hooks and CI integrations provide additional checkpoints | Move verification closer to commits and pull-request merges. |
-| Local copies and portable formats are supported | Reduce dependence on a single model vendor or development environment. |
+| A stable core policy layer, separate from domain rule sets | Establishes a consistent security baseline while allowing individual domains to evolve without destabilizing the whole framework. |
+| A structured manifest and rule inventory | Makes the security knowledge base discoverable and reviewable, supports integrity and consistency checks, and provides a clear reference for tooling and agents. |
+| One governance model with multiple agent adapters | Avoids tying the security architecture to a single vendor, model, prompt format, or IDE. |
+| Dedicated skills, scanners, CLI, orchestration, and reporting | Turns security requirements into repeatable developer operations and observable findings rather than relying only on conversational claims. |
+| Policy-as-code examples, hooks, and CI workflows | Connects design-time requirements to automated validation at commit and pull-request stages. |
+| Explicit enforcement levels and lifecycle guidance | Helps teams distinguish mandatory controls, recommended practices, exceptions, and verification responsibilities. |
+| Portable files, documented interfaces, and testable components | Supports local adoption, customization, independent review, and integration into existing engineering environments. |
 
-This is a defense-in-depth design: no single layer is assumed to be sufficient.
+This architecture creates a layered control system: each component has a defined responsibility, and the combined workflow provides broader coverage than any single prompt, scanner, or pipeline could provide alone.
 
 ## How TSAR Works in Practice
 
-TSAR's workflow can be understood as five connected layers:
+TSAR operates as a coordinated security workflow across five engineering layers:
 
-1. **Policy layer — `system/`:** defines the core directive, prohibited patterns, enforcement levels, and lifecycle expectations.
-2. **Rules layer — `rules/` and `manifest.yaml`:** organizes security guidance by domain. The manifest identifies the active rule files and version metadata.
-3. **Agent guidance — `prompts/`:** provides agent-specific instruction packs and a universal fallback. These instructions tell an agent when and how to consult TSAR; they do not force compliance.
-4. **Local verification — `skills/` and `tools/`:** provides scanners and utilities such as secret scanning, secure code review, cryptographic inventory, threat modeling, CLI operations, and reporting.
-5. **Repository governance — `integrations/` and `.github/`:** provides hooks and CI workflows that can validate changes and enforce configured checks before merge.
+1. **Governance and policy — `system/`:** establishes the framework's security baseline, prohibited patterns, enforcement levels, and lifecycle expectations. This layer defines how security requirements are interpreted and handled across the development process.
+2. **Security knowledge base — `rules/` and `manifest.yaml`:** organizes active requirements across 37 domains and provides a structured inventory that can be referenced by people, agents, and validation tools.
+3. **Agent and developer integration — `prompts/` and `skills/`:** connects the governance model to supported AI coding agents and developer workflows. Agent adapters make the framework usable across different environments while skills expose repeatable task-specific capabilities.
+4. **Technical assessment and automation — `tools/`:** supplies scanners and utilities for secret detection, secure code review, cryptographic inventory, threat-modeling workflows, CLI operations, orchestration, language-server integration, and reporting.
+5. **Delivery and repository controls — `integrations/` and `.github/`:** brings validation into the software delivery lifecycle through hooks, CI workflows, tests, policy checks, and reviewable outputs. Teams can configure required checks as merge gates in their repositories.
 
 ### Typical development flow
 
 ```text
-Developer task
-     |
-     v
-Agent loads TSAR instructions
-     |
-     v
-Manifest identifies relevant rules
-     |
-     v
-Agent plans and implements the change
-     |
-     v
-Local scanners / CLI / hooks inspect the result
-     |
-     v
-CI validates configured checks
-     |
-     v
-Human review and merge decision
+Security-governed engineering task
+              |
+              v
+Select the project baseline and TSAR policy context
+              |
+              v
+Resolve applicable domains and active security rules
+              |
+              v
+Agent / developer plans the change against those requirements
+              |
+              v
+Implement with relevant secure-design and threat considerations
+              |
+              v
+Run TSAR skills, scanners, CLI tools, tests and policy checks
+              |
+              v
+Review findings, remediate issues and record exceptions
+              |
+              v
+Repository hooks and CI validate configured controls
+              |
+              v
+Engineering review, evidence-based approval and merge
 ```
 
-In practical terms:
+In an integrated project, the workflow is more than loading instructions:
 
-- The developer installs or configures the instruction pack for the chosen agent.
-- The agent reads the core directives and selects relevant domain rules for the task.
-- The agent uses those requirements as guidance while planning and changing code.
-- Local scanners and project tests inspect the resulting files. Findings must be reviewed and fixed; a clean scan only means that the configured checks did not report a finding.
-- Repository workflows run the checks configured by the project. Required GitHub checks can block a pull request only when branch protection or rulesets are configured to require them.
-- A developer or reviewer evaluates the findings and decides whether the change is ready to merge.
+- **Establish the baseline:** the team adopts TSAR's core policy and selects the integration mode appropriate to its agents, repositories, and development environment.
+- **Resolve the security context:** the manifest and rule structure identify the relevant domains and active requirements for the change—such as secrets handling, cryptography, API security, cloud configuration, or Kubernetes hardening.
+- **Engineer against the requirements:** the agent and developer use the applicable controls during design, implementation, and code review. Threat considerations and security constraints are brought into the task before changes are finalized.
+- **Run technical assessments:** TSAR's available skills and tools inspect the target files and produce findings or inventories. The CLI and orchestrator can coordinate supported checks; project tests and external tools can complement them.
+- **Remediate and verify:** findings are assessed, corrected, or handled through documented exceptions. The relevant checks are rerun so the team can review the resulting evidence.
+- **Apply repository governance:** hooks and CI workflows execute the checks configured for the repository. Branch protection or rulesets can make selected GitHub checks mandatory before merge.
+- **Make an accountable decision:** maintainers and reviewers use code changes, test results, scanner output, and documented exceptions to decide whether the change is ready.
 
-TSAR does not automatically implement every control described in its rules. For example, a rule may require secure key storage, mTLS, or runtime monitoring; the application and infrastructure team must implement and operate those controls in the target environment.
+TSAR supplies the governance model, reusable security requirements, and tooling to support this process. Project teams remain responsible for implementing environment-specific controls—such as key-management services, mTLS configuration, runtime monitoring, or production access restrictions—and for validating those controls in their own systems.
 
 ## Adopt TSAR in Your AI Agent
 
