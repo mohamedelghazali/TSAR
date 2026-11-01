@@ -20,9 +20,9 @@ inputs:
     required: false
     default: 'true'
   tsar_ref:
-    description: 'TSAR repository ref (branch, tag, or SHA)'
+    description: 'TSAR repository ref (branch, tag, or full commit SHA)'
     required: false
-    default: 'main'
+    default: 'feb955ecd7f98edcac365e3a2c9f05e0c7dfd0b5'
   python_version:
     description: 'Python version'
     required: false
@@ -40,7 +40,7 @@ runs:
   using: 'composite'
   steps:
     - name: Set up Python
-      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0 # v5
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
       with:
         python-version: ${{ inputs.python_version }}
 
@@ -66,7 +66,7 @@ runs:
 
     - name: Install dependencies
       shell: bash
-      run: pip install pyyaml
+      run: python -m pip install --disable-pip-version-check pyyaml
 
     - name: Secret scan
       id: scan
