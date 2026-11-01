@@ -1,3 +1,8 @@
+---
+name: secret-scanner
+description: Scan source code and generated files for hardcoded credentials, API keys, private keys, tokens, and connection strings. Use before sharing code, reviewing changes, or checking repositories for exposed secrets.
+---
+
 # Secret Scanner Skill
 
 ## Purpose
