@@ -18,10 +18,17 @@ To list the repository's available skills without installing:
 npx skills add mohamedelghazali/TSAR --list
 ```
 
-To update installed copies after TSAR changes, use the update command supported by the installed CLI version:
+To verify global installation:
 
 ```bash
-npx skills update
+npx skills ls -g
+```
+
+To check for updates and update global skills after TSAR changes:
+
+```bash
+npx skills check
+npx skills update -g
 ```
 
 ## What global installation provides
