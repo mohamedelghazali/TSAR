@@ -1,3 +1,8 @@
+---
+name: secure-review
+description: Perform static security review of source code for injection, path traversal, SSRF, unsafe deserialization, XSS, weak cryptography, and hardcoded secrets. Use when reviewing, generating, or modifying application code and security-sensitive changes.
+---
+
 # Secure Review Skill
 
 ## Purpose
