@@ -362,7 +362,7 @@ def main() -> int:
 
     ini = sub.add_parser("init")
     ini.add_argument("path", nargs="?", default=".")
-    ini.add_argument("--agent", required=True,
+    ini.add_argument("--agent", required=False, default="generic",
                      choices=["claude", "claude-code", "cursor", "copilot",
                               "windsurf", "windsurf-rc", "generic"])
     ini.set_defaults(func=cmd_init)
