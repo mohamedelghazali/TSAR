@@ -10,6 +10,31 @@ Built for security-conscious engineering teams, TSAR brings security policy clos
 
 **Repository version:** 1.1.1 (see VERSION, manifest.yaml, and tools/tsar-cli/pyproject.toml). The v2.0 roadmap is proposed work, not the current release. See [Release Qualification](docs/release-qualification.md) for current evidence and release status.
 
+## Install
+
+If an AI agent is given this repository link and asked to adopt TSAR, it should follow [Universal Agent Onboarding](docs/universal-agent-onboarding.md), inspect its environment, install the compatible TSAR skills, configure supported durable instructions when permitted, and verify what it actually changed.
+
+For compatible coding agents with shell access, install all valid TSAR skills globally across detected agents:
+
+```bash
+npx skills add mohamedelghazali/TSAR -g --all
+```
+
+Verify the installation:
+
+```bash
+npx skills ls -g
+```
+
+Check for and apply updates:
+
+```bash
+npx skills check
+npx skills update -g
+```
+
+**Important:** the URL is a discovery and onboarding entry point, not executable code. A model can perform installation only if its environment provides shell/tool access and the necessary permissions. Global skill installation does not force every model to load TSAR on every turn, nor does it modify model training or provider-level system prompts. See [persistence boundaries](docs/universal-agent-onboarding.md#persistence-boundaries).
+
 ## Coverage
 
 - **171 active rule files** across **37 rule domains** (rules/blockchain/README.md is an overview file, not a rule).
@@ -46,7 +71,7 @@ Claude, Claude Code, GPT, DeepSeek-Coder, Qwen-Coder, Gemini, Llama, Cursor, Git
 |---|---|
 | system/ | Core directive, prohibitions, enforcement levels |
 | rules/ | 37 domains of security rules |
-| skills/ | Scanners and security helpers |
+| skills/ | Scanners and security helpers, plus Agent Skills packages |
 | tools/ | CLI, orchestrator, report, LSP, dashboard |
 | integrations/ | CI/CD templates and hooks |
 | prompts/ | Agent-specific and universal instruction files |
@@ -73,6 +98,8 @@ Run ./verify-all.sh to execute the repository verification suite, including rule
 
 - [Getting Started](docs/getting-started.md)
 - [Architecture](docs/architecture.md)
+- [Universal Agent Onboarding](docs/universal-agent-onboarding.md)
+- [Agent Skills](docs/agent-skills.md)
 - [Agent Integration](docs/agent-integration.md)
 - [Agent Compatibility Matrix](docs/agent-compatibility-matrix.md)
 - [Compliance Mappings](docs/compliance/README.md)
