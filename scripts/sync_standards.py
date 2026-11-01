@@ -7,19 +7,25 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import uuid
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 UPSTREAM = {
     "owasp-llm": "https://raw.githubusercontent.com/OWASP/www-project-top-10-for-large-language-model-applications/main/README.md",
-    "nist-ai-rmf": "https://raw.githubusercontent.com/usnistgov/AIRMF/main/README.md",
+    # The former usnistgov/AIRMF repository no longer exists (HTTP 404).
+    # Track the authoritative NIST AI RMF landing page instead of a dead mirror.
+    "nist-ai-rmf": "https://www.nist.gov/itl/ai-risk-management-framework",
     "owasp-top10": "https://raw.githubusercontent.com/OWASP/Top10/master/README.md",
 }
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = ROOT / ".tsar-cache"
 MAX_SOURCE_BYTES = 5 * 1024 * 1024
+FETCH_ATTEMPTS = 3
+RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 
 
 def write_github_outputs(changed: list[str]) -> None:
@@ -33,12 +39,29 @@ def write_github_outputs(changed: list[str]) -> None:
 
 
 def fetch(url: str) -> bytes:
+    """Fetch a bounded upstream document, retrying transient network/server errors."""
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "TSAR-Standards-Sync/2.0"},
+        headers={
+            "User-Agent": "TSAR-Standards-Sync/2.1 (+https://github.com/mohamedelghazali/TSAR)",
+            "Accept": "text/html, text/plain, application/json, application/pdf, */*",
+        },
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
-        data = response.read(MAX_SOURCE_BYTES + 1)
+
+    for attempt in range(FETCH_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                data = response.read(MAX_SOURCE_BYTES + 1)
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == FETCH_ATTEMPTS - 1:
+                raise
+            time.sleep(2 ** attempt)
+        except urllib.error.URLError:
+            if attempt == FETCH_ATTEMPTS - 1:
+                raise
+            time.sleep(2 ** attempt)
+
     if not data:
         raise ValueError("upstream returned an empty response")
     if len(data) > MAX_SOURCE_BYTES:
@@ -130,7 +153,7 @@ def main() -> int:
             try:
                 fetched[name] = fetch(url)
             except Exception as exc:
-                print(f"FATAL: failed to fetch {name}: {exc}", file=sys.stderr)
+                print(f"FATAL: failed to fetch {name} ({url}): {exc}", file=sys.stderr)
                 print("Synchronization aborted; cache was not changed.", file=sys.stderr)
                 return 1
 
