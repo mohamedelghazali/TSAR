@@ -25,7 +25,8 @@ tsar report . --format html --output report.html
 tsar compliance soc2
 tsar drift
 tsar verify-upstream --domain api --domain iam
-tsar lifecycle-plan "Implement OAuth login API" --domain iam --domain api\ntsar lifecycle-start "Implement OAuth login API" --domain iam --domain api --audit-file .tsar/runs/oauth-login.json
+tsar lifecycle-plan "Implement OAuth login API" --domain iam --domain api
+tsar lifecycle-start "Implement OAuth login API" --domain iam --domain api --audit-file .tsar/runs/oauth-login.json
 tsar init . --agent cursor
 ```
 
@@ -34,6 +35,16 @@ tsar init . --agent cursor
 - 0: clean.
 - 1: findings or drift.
 - 2: verification/tooling failure (preflight fails closed).
+
+## Lifecycle evidence boundaries
+
+`lifecycle-evidence` accepts only non-empty regular evidence files inside the TSAR project root, rejects symlink paths and path traversal, records SHA-256, size, actor label, timestamp, and PASS/FAIL decision, and updates only a PENDING gate. The upstream preflight gate cannot be overridden. The actor label is not authenticated, evidence content is not semantically validated, and the local audit file is not tamper-proof or signed.
+
+Example:
+
+```bash
+tsar lifecycle-evidence --audit-file .tsar/runs/run.json --gate core_policy_review --evidence evidence/core-review.md --actor reviewer@example.org --decision PASS
+```
 
 ## Lifecycle planning boundaries
 
