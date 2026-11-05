@@ -134,7 +134,8 @@ def cmd_lifecycle_evidence(args) -> int:
     try:
         record = attest_gate(
             Path(args.audit_file), repo_root=ROOT, gate=args.gate,
-            evidence_file=args.evidence, actor=args.actor, decision=args.decision,
+            evidence_file=args.evidence, attestation_file=Path(args.attestation),
+            trusted_reviewers_file=Path(args.trusted_reviewers),
         )
     except LifecycleEvidenceError as exc:
         print(f"Lifecycle evidence REJECTED: {exc}", file=sys.stderr)
@@ -148,7 +149,7 @@ def cmd_lifecycle_verify(args) -> int:
     sys.path.insert(0, str(TOOLS / "tsar-cli"))
     from lifecycle_evidence import LifecycleEvidenceError, verify_audit
     try:
-        result = verify_audit(Path(args.audit_file), repo_root=ROOT)
+        result = verify_audit(Path(args.audit_file), repo_root=ROOT, trusted_reviewers_file=Path(args.trusted_reviewers))
     except LifecycleEvidenceError as exc:
         print(f"Lifecycle audit verification ERROR: {exc}", file=sys.stderr)
         return 2
@@ -461,12 +462,13 @@ def main() -> int:
     le.add_argument("--audit-file", required=True, help="Existing lifecycle audit JSON path")
     le.add_argument("--gate", required=True, help="Gate name from the lifecycle audit record")
     le.add_argument("--evidence", required=True, help="Evidence file path relative to the TSAR project root")
-    le.add_argument("--actor", required=True, help="Reviewer or operator identifier (not authenticated)")
-    le.add_argument("--decision", choices=["PASS", "FAIL"], default="PASS")
+    le.add_argument("--attestation", required=True, help="Detached Ed25519 reviewer attestation JSON")
+    le.add_argument("--trusted-reviewers", required=True, help="External trusted reviewer keyring JSON")
     le.set_defaults(func=cmd_lifecycle_evidence)
 
     lv = sub.add_parser("lifecycle-verify", help="Re-hash and verify lifecycle audit evidence")
     lv.add_argument("--audit-file", required=True, help="Lifecycle audit JSON path")
+    lv.add_argument("--trusted-reviewers", required=True, help="External trusted reviewer keyring JSON")
     lv.set_defaults(func=cmd_lifecycle_verify)
 
     u = sub.add_parser("verify-upstream")
