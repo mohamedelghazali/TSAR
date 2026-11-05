@@ -24,7 +24,7 @@ def setup_run(tmp_path):
     audit.write_text(json.dumps({
         "schema": "tsar/lifecycle-run/v1",
         "provenance": {"upstream_commit_sha": "a" * 40},
-        "gates": {"upstream_preflight": "PASS", "core_policy_review": "PENDING"},
+        "gates": {"upstream_preflight": "PASS", "core_policy_review": "PENDING", "release_approval": "PENDING"},
         "evidence": [],
     }), encoding="utf-8")
     private = Ed25519PrivateKey.generate()
@@ -112,14 +112,17 @@ def test_unsigned_legacy_entry_fails_closed(tmp_path):
     root, audit, keyring, _ = setup_run(tmp_path)
     data = json.loads(audit.read_text())
     data["gates"]["core_policy_review"] = "PASS"
+    import hashlib
+    evidence_bytes = (root / "evidence" / "review.txt").read_bytes()
     data["evidence"] = [{
         "gate": "core_policy_review", "decision": "PASS", "actor": "untrusted",
-        "path": "evidence/review.txt", "sha256": "0" * 64, "size_bytes": 10,
+        "path": "evidence/review.txt", "sha256": hashlib.sha256(evidence_bytes).hexdigest(),
+        "size_bytes": len(evidence_bytes),
     }]
     audit.write_text(json.dumps(data))
     result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["status"] == "FAIL"
-    assert result["findings"][0]["status"] == "HASH_MISMATCH"
+    assert result["findings"][0]["status"] == "UNAUTHENTICATED"
 
 
 def test_reviewer_keyring_must_be_outside_project_and_not_writable(tmp_path):
