@@ -53,7 +53,10 @@ def _load_audit(audit_file: Path, root: Path) -> tuple[Path, dict, bytes]:
     raw = Path(audit_file).expanduser()
     if raw.is_symlink():
         raise LifecycleEvidenceError("audit symlinks are not accepted")
-    audit = raw.resolve(strict=True)
+    try:
+        audit = raw.resolve(strict=True)
+    except OSError as exc:
+        raise LifecycleEvidenceError(f"cannot resolve lifecycle audit file: {exc}") from exc
     if not audit.is_file() or not audit.is_relative_to(root):
         raise LifecycleEvidenceError("audit file must be a regular file inside the project root")
     try:
@@ -74,7 +77,10 @@ def _load_keyring(keyring_file: Path, root: Path) -> dict[str, dict]:
     raw = Path(keyring_file).expanduser()
     if raw.is_symlink():
         raise LifecycleEvidenceError("trusted reviewer keyring symlinks are not accepted")
-    keyring_path = raw.resolve(strict=True)
+    try:
+        keyring_path = raw.resolve(strict=True)
+    except OSError as exc:
+        raise LifecycleEvidenceError(f"cannot resolve trusted reviewer keyring: {exc}") from exc
     if not keyring_path.is_file() or keyring_path.is_relative_to(root):
         raise LifecycleEvidenceError("trusted reviewer keyring must be a regular file outside the project root")
     if os.name == "posix" and keyring_path.stat().st_mode & (stat.S_IWGRP | stat.S_IWOTH):
@@ -124,6 +130,9 @@ def build_attestation_payload(audit_file: Path, *, repo_root: Path, gate: str,
     key = _load_keyring(keyring_file, root).get(key_id)
     if key is None or not key["active"]:
         raise LifecycleEvidenceError("reviewer key is not trusted or is inactive")
+    provenance = record.get("provenance", {})
+    if not isinstance(provenance, dict):
+        raise LifecycleEvidenceError("audit provenance must be an object")
     if gate not in record["gates"] or gate == "upstream_preflight":
         raise LifecycleEvidenceError("unknown or reserved lifecycle gate")
     if record["gates"][gate] != "PENDING":
@@ -148,7 +157,7 @@ def build_attestation_payload(audit_file: Path, *, repo_root: Path, gate: str,
         "schema": "tsar/reviewer-attestation-payload/v1",
         "audit_path": audit.relative_to(root).as_posix(),
         "audit_sha256": _sha256_bytes(audit_bytes),
-        "upstream_commit_sha": record.get("provenance", {}).get("upstream_commit_sha"),
+        "upstream_commit_sha": provenance.get("upstream_commit_sha"),
         "gate": gate,
         "decision": decision,
         "key_id": key_id,
@@ -252,6 +261,9 @@ def verify_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
     root = Path(repo_root).resolve(strict=True)
     audit, record, _ = _load_audit(audit_file, root)
     keys = _load_keyring(trusted_reviewers_file, root)
+    provenance = record.get("provenance", {})
+    if not isinstance(provenance, dict):
+        raise LifecycleEvidenceError("audit provenance must be an object")
     entries = record.get("evidence", [])
     findings, seen = [], set()
     for index, entry in enumerate(entries):
@@ -291,7 +303,7 @@ def verify_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
                 "gate": gate, "decision": entry["decision"], "actor": key["actor"],
                 "key_id": key_id, "evidence_path": entry["path"],
                 "evidence_sha256": digest, "evidence_size_bytes": size,
-                "upstream_commit_sha": record.get("provenance", {}).get("upstream_commit_sha"),
+                "upstream_commit_sha": provenance.get("upstream_commit_sha"),
             }
             if (not isinstance(payload.get("audit_sha256"), str) or len(payload["audit_sha256"]) != 64
                     or any(ch not in "0123456789abcdef" for ch in payload["audit_sha256"])):
