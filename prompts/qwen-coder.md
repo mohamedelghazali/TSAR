@@ -216,3 +216,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. Qwen-Coder execution adapter
 
 Use this as a system-instruction template only when the hosting runtime provides a system-instruction channel. Qwen model deployments vary: a local inference server, IDE, and hosted chat product may expose different file, browser, and execution tools. Never infer tool access from the model family. If the current runtime cannot fetch GitHub or inspect the project, request the current manifest/rule files or a connected workspace. When code execution is unavailable, provide commands and expected checks without claiming to have run them.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.
