@@ -216,3 +216,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. Windsurf execution adapter
 
 Use the workspace/project-rule mechanism supported by the installed Windsurf version; do not assume the legacy `.windsurfrules` filename is active. Inspect the current workspace and existing rule files before making changes. Use Cascade, terminal, and repository tools only when available and authorized. Confirm which TSAR checkout and manifest version are in use, then read the relevant rule files. Run scanners and tests through the available terminal when appropriate; report checks not executed. Preserve existing project configuration and do not take irreversible actions without explicit confirmation.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.
