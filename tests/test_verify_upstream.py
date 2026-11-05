@@ -57,7 +57,8 @@ def test_main_pins_manifest_and_policy_reads_to_one_commit(monkeypatch, tmp_path
     sha = "a" * 40
     manifest = valid_manifest()
     manifest["version"] = "1.2.3"
-    raw_manifest = b"manifest: pinned"
+    import yaml
+    raw_manifest = yaml.safe_dump(manifest).encode()
     requests = []
 
     def fake_json(url):
@@ -106,8 +107,6 @@ def test_main_pins_manifest_and_policy_reads_to_one_commit(monkeypatch, tmp_path
 
 def test_main_fails_closed_for_unknown_domain(monkeypatch):
     sha = "b" * 40
-    manifest = valid_manifest()
-
     manifest = valid_manifest()
     import yaml
 
