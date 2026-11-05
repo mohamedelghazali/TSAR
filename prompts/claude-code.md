@@ -212,3 +212,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. Claude Code execution adapter
 
 Treat the repository's `CLAUDE.md` and applicable nested instructions as project context, while respecting higher-priority platform instructions. Inspect the working tree before editing; preserve unrelated user changes. Use the shell only for documented, task-relevant commands. Run TSAR scanners against the changed scope before finalizing when Python and dependencies are available. Ask for explicit confirmation before destructive operations, deployment, external publication, permission changes, or irreversible actions. Do not write secrets to files or terminal output. Report commands and their actual exit results.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.

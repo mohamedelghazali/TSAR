@@ -83,6 +83,93 @@ def cmd_compliance(args) -> int:
     print("All referenced rules exist.")
     return 0
 
+def cmd_lifecycle_plan(args) -> int:
+    """Create a deterministic lifecycle plan; this does not approve or execute work."""
+    import yaml
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_engine import classify_task
+
+    try:
+        manifest = yaml.safe_load((ROOT / "manifest.yaml").read_text(encoding="utf-8"))
+        domains = manifest.get("active_files", {})
+        plan = classify_task(
+            args.task,
+            explicit_domains=args.domain,
+            impact=args.impact,
+            available_domains=domains.keys(),
+        )
+    except Exception as exc:
+        print(f"Lifecycle planning failed: {exc}", file=sys.stderr)
+        return 2
+
+    print(json.dumps(plan.to_dict(), indent=2, ensure_ascii=False))
+    return 0
+
+
+
+def cmd_lifecycle_start(args) -> int:
+    """Start a lifecycle run only after evidence-backed upstream preflight."""
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_orchestrator import LifecycleStartError, start_lifecycle
+
+    try:
+        record = start_lifecycle(
+            args.task,
+            repo_root=ROOT,
+            audit_file=Path(args.audit_file),
+            domains=args.domain,
+            impact=args.impact,
+        )
+    except LifecycleStartError as exc:
+        print(f"Lifecycle start BLOCKED: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(record, indent=2, ensure_ascii=False))
+    print(f"Audit record: {Path(args.audit_file)}")
+    return 0
+
+def cmd_lifecycle_evidence(args) -> int:
+    """Attach hashed evidence to one pending lifecycle gate."""
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_evidence import LifecycleEvidenceError, attest_gate
+    try:
+        record = attest_gate(
+            Path(args.audit_file), repo_root=ROOT, gate=args.gate,
+            evidence_file=args.evidence, attestation_file=Path(args.attestation),
+            trusted_reviewers_file=Path(args.trusted_reviewers),
+        )
+    except LifecycleEvidenceError as exc:
+        print(f"Lifecycle evidence REJECTED: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(record, indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_lifecycle_verify(args) -> int:
+    """Verify recorded lifecycle evidence against current file bytes."""
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_evidence import LifecycleEvidenceError, verify_audit
+    try:
+        result = verify_audit(Path(args.audit_file), repo_root=ROOT, trusted_reviewers_file=Path(args.trusted_reviewers))
+    except LifecycleEvidenceError as exc:
+        print(f"Lifecycle audit verification ERROR: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result["status"] == "PASS" else 1
+
+
+def cmd_verify_upstream(args) -> int:
+    """Verify the authoritative upstream snapshot before security-sensitive work."""
+    script = Path(__file__).resolve().with_name("verify_upstream.py")
+    argv = [str(script)]
+    for domain in args.domain:
+        argv.extend(["--domain", domain])
+    if args.report:
+        argv.extend(["--report", args.report])
+    if args.repo_root:
+        argv.extend(["--repo-root", args.repo_root])
+    return subprocess.call([sys.executable, *argv])
+
+
 def cmd_drift(args) -> int:
     """Compare local manifest and remote; report drift."""
     import urllib.request
@@ -356,6 +443,40 @@ def main() -> int:
     c = sub.add_parser("compliance")
     c.add_argument("framework", choices=["soc2", "iso27001", "pci-dss", "hipaa", "gdpr"])
     c.set_defaults(func=cmd_compliance)
+
+    lp = sub.add_parser("lifecycle-plan", help="Create a deterministic TSAR lifecycle plan")
+    lp.add_argument("task", help="Short description of the engineering task")
+    lp.add_argument("--domain", action="append", default=[], help="Explicit applicable manifest domain; repeat as needed")
+    lp.add_argument("--impact", choices=["auto", "standard", "high"], default="auto")
+    lp.set_defaults(func=cmd_lifecycle_plan)
+
+
+    ls = sub.add_parser("lifecycle-start", help="Start an evidence-backed TSAR lifecycle run")
+    ls.add_argument("task", help="Engineering task description")
+    ls.add_argument("--audit-file", required=True, help="New audit JSON path; existing files are never overwritten")
+    ls.add_argument("--domain", action="append", default=[], help="Applicable manifest domain; repeat as needed")
+    ls.add_argument("--impact", choices=["auto", "standard", "high"], default="auto")
+    ls.set_defaults(func=cmd_lifecycle_start)
+
+    le = sub.add_parser("lifecycle-evidence", help="Attach hashed evidence to a pending lifecycle gate")
+    le.add_argument("--audit-file", required=True, help="Existing lifecycle audit JSON path")
+    le.add_argument("--gate", required=True, help="Gate name from the lifecycle audit record")
+    le.add_argument("--evidence", required=True, help="Evidence file path relative to the TSAR project root")
+    le.add_argument("--attestation", required=True, help="Detached Ed25519 reviewer attestation JSON")
+    le.add_argument("--trusted-reviewers", required=True, help="External trusted reviewer keyring JSON")
+    le.set_defaults(func=cmd_lifecycle_evidence)
+
+    lv = sub.add_parser("lifecycle-verify", help="Re-hash and verify lifecycle audit evidence")
+    lv.add_argument("--audit-file", required=True, help="Lifecycle audit JSON path")
+    lv.add_argument("--trusted-reviewers", required=True, help="External trusted reviewer keyring JSON")
+    lv.set_defaults(func=cmd_lifecycle_verify)
+
+    u = sub.add_parser("verify-upstream")
+    u.add_argument("--domain", action="append", default=[],
+                   help="Applicable manifest domain; repeat as needed")
+    u.add_argument("--report", help="Write a JSON verification report")
+    u.add_argument("--repo-root", help="Optional local TSAR checkout for version checks")
+    u.set_defaults(func=cmd_verify_upstream)
 
     d = sub.add_parser("drift")
     d.set_defaults(func=cmd_drift)
