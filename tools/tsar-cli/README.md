@@ -25,7 +25,8 @@ tsar report . --format html --output report.html
 tsar compliance soc2
 tsar drift
 tsar verify-upstream --domain api --domain iam
-tsar lifecycle-plan "Implement OAuth login API" --domain iam --domain api\ntsar lifecycle-start "Implement OAuth login API" --domain iam --domain api --audit-file .tsar/runs/oauth-login.json
+tsar lifecycle-plan "Implement OAuth login API" --domain iam --domain api
+tsar lifecycle-start "Implement OAuth login API" --domain iam --domain api --audit-file .tsar/runs/oauth-login.json
 tsar init . --agent cursor
 ```
 
