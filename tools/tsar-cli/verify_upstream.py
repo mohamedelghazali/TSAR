@@ -194,16 +194,16 @@ def main() -> int:
         report["selected_domains"] = selected
         to_read = []
         for domain in selected:
-            to_read.extend(groups[domain])
-        for path in to_read:
-            encoded = urllib.parse.quote(path, safe="/")
-            data = fetch_bytes(f"{RAW}/{sha}/{encoded}")
-            if not data.strip():
-                raise VerificationError(f"Policy file is empty: {path}")
-            if domain == "core":
-                report["core_files_read"].append(path)
-            else:
-                report["selected_policy_files_read"].append(path)
+            for path in groups[domain]:
+                encoded = urllib.parse.quote(path, safe="/")
+                data = fetch_bytes(f"{RAW}/{sha}/{encoded}")
+                if not data.strip():
+                    raise VerificationError(f"Policy file is empty: {path}")
+                to_read.append(path)
+                if domain == "core":
+                    report["core_files_read"].append(path)
+                else:
+                    report["selected_policy_files_read"].append(path)
         passed("read_required_policy", f"Fetched {len(to_read)} policy files from the same pinned commit")
 
         if args.repo_root:
