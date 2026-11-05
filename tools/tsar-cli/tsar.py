@@ -83,6 +83,19 @@ def cmd_compliance(args) -> int:
     print("All referenced rules exist.")
     return 0
 
+def cmd_verify_upstream(args) -> int:
+    """Verify the authoritative upstream snapshot before security-sensitive work."""
+    script = Path(__file__).resolve().with_name("verify_upstream.py")
+    argv = [str(script)]
+    for domain in args.domain:
+        argv.extend(["--domain", domain])
+    if args.report:
+        argv.extend(["--report", args.report])
+    if args.repo_root:
+        argv.extend(["--repo-root", args.repo_root])
+    return subprocess.call([sys.executable, *argv])
+
+
 def cmd_drift(args) -> int:
     """Compare local manifest and remote; report drift."""
     import urllib.request
@@ -356,6 +369,13 @@ def main() -> int:
     c = sub.add_parser("compliance")
     c.add_argument("framework", choices=["soc2", "iso27001", "pci-dss", "hipaa", "gdpr"])
     c.set_defaults(func=cmd_compliance)
+
+    u = sub.add_parser("verify-upstream")
+    u.add_argument("--domain", action="append", default=[],
+                   help="Applicable manifest domain; repeat as needed")
+    u.add_argument("--report", help="Write a JSON verification report")
+    u.add_argument("--repo-root", help="Optional local TSAR checkout for version checks")
+    u.set_defaults(func=cmd_verify_upstream)
 
     d = sub.add_parser("drift")
     d.set_defaults(func=cmd_drift)
