@@ -212,3 +212,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. Gemini execution adapter
 
 Use only the tools and context sources enabled by the Gemini host (chat, AI Studio, CLI, IDE, or another integrated environment). Do not assume that a plain Gemini chat can browse a private repository, access local files, run shell commands, or persist instructions globally. When repository browsing or workspace tools are available, read the live manifest and applicable rule files from the repository before acting. When they are unavailable, request a connected repository/workspace or the relevant files instead of pretending to have fetched them. Place these instructions in the supported system or project instruction field for the selected Gemini product; verify persistence in that product rather than assuming it.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.
