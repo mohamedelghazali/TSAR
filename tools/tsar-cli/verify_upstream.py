@@ -130,7 +130,7 @@ def validate_manifest(manifest: dict[str, Any]) -> tuple[str, dict[str, list[str
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify current TSAR upstream before security-sensitive work")
-    parser.add_argument("--domain", action="append", default=[], help="Applicable manifest domain; repeat as needed")
+    parser.add_argument("--domain", action="append", required=True, help="Required applicable manifest domain; repeat as needed")
     parser.add_argument("--report", help="Write a JSON verification report to this path")
     parser.add_argument("--repo-root", default=None, help="Optional local TSAR checkout for version consistency checks")
     args = parser.parse_args()
