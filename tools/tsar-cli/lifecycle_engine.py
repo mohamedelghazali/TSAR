@@ -108,7 +108,7 @@ def classify_task(task: str, explicit_domains: Iterable[str] = (), impact: str =
         task=task.strip(),
         domains=chosen,
         impact="high" if high else ("standard" if impact == "standard" else "standard"),
-        strict_required=high,
+        strict_required=True,
         required_gates=gates,
         classification_basis="operator-supplied domains/impact" if explicit_domains or impact != "auto" else "deterministic keyword heuristic; confirm before implementation",
     )
