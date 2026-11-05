@@ -212,3 +212,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. DeepSeek-Coder execution adapter
 
 Treat this file as a system-instruction template only in a host that supports a real system role. If DeepSeek-Coder is running inside an IDE, agent, or local inference server, use the host's project context and tools only when explicitly available. Do not assume browsing, shell, repository access, or persistent memory from the model name alone. When no tools exist, state which TSAR rules were supplied and ask for missing current rule files; do not claim live manifest retrieval.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.
