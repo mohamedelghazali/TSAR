@@ -108,11 +108,35 @@ def test_main_fails_closed_for_unknown_domain(monkeypatch):
     sha = "b" * 40
     manifest = valid_manifest()
 
-    monkeypatch.setattr(verifier, "fetch_json", lambda url: (
-        {"sha": sha} if url.endswith("/commits/main") else
-        {"truncated": False, "tree": []}
-    ))
-    monkeypatch.setattr(verifier, "fetch_bytes", lambda url, **kwargs: b"")
+    manifest = valid_manifest()
+    import yaml
+
+    def fake_json(url):
+        if url.endswith("/commits/main"):
+            return {"sha": sha}
+        return {
+            "truncated": False,
+            "tree": [
+                {"path": path, "type": "blob"}
+                for paths in manifest["active_files"].values()
+                for path in paths
+            ] + [
+                {"path": "VERSION", "type": "blob"},
+                {"path": "tools/tsar-cli/pyproject.toml", "type": "blob"},
+            ],
+        }
+
+    def fake_bytes(url, **_kwargs):
+        if url.endswith(f"/{sha}/manifest.yaml"):
+            return yaml.safe_dump(manifest).encode()
+        if url.endswith(f"/{sha}/VERSION"):
+            return b"1.2.3\\n"
+        if url.endswith(f"/{sha}/tools/tsar-cli/pyproject.toml"):
+            return b'[project]\\nversion = "1.2.3"\\n'
+        return b"# policy\\n"
+
+    monkeypatch.setattr(verifier, "fetch_json", fake_json)
+    monkeypatch.setattr(verifier, "fetch_bytes", fake_bytes)
     monkeypatch.setattr("sys.argv", ["verify_upstream.py", "--domain", "not_a_real_domain"])
 
     assert verifier.main() == 2
