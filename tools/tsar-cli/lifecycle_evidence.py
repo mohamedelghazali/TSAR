@@ -89,17 +89,19 @@ def _load_keyring(keyring_file: Path, root: Path) -> dict[str, dict]:
     if not isinstance(keys, list):
         raise LifecycleEvidenceError("trusted reviewer keyring keys must be a list")
     result = {}
+    seen_ids = set()
     for item in keys:
         if not isinstance(item, dict):
             raise LifecycleEvidenceError("trusted reviewer key entry must be an object")
         key_id, actor, encoded = item.get("key_id"), item.get("actor"), item.get("public_key")
         gates = item.get("allowed_gates")
-        if (not isinstance(key_id, str) or not key_id or key_id in result
+        if (not isinstance(key_id, str) or not key_id or key_id in seen_ids
                 or not isinstance(actor, str) or not actor.strip()
                 or not isinstance(encoded, str) or not isinstance(gates, list)
                 or not all(isinstance(g, str) and g for g in gates)
                 or not isinstance(item.get("active"), bool)):
             raise LifecycleEvidenceError("invalid or duplicate trusted reviewer key entry")
+        seen_ids.add(key_id)
         if item["active"]:
             try:
                 public_bytes = base64.b64decode(encoded, validate=True)
@@ -133,6 +135,8 @@ def build_attestation_payload(audit_file: Path, *, repo_root: Path, gate: str,
     evidence_path, digest, size = _safe_relative_file(root, evidence_file)
     timestamp = issued_at or datetime.now(timezone.utc).isoformat()
     try:
+        if not isinstance(timestamp, str):
+            raise ValueError("timestamp must be a string")
         parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
         if parsed.tzinfo is None:
             raise ValueError("timezone required")
@@ -173,7 +177,10 @@ def attest_gate(audit_file: Path, *, repo_root: Path, gate: str, evidence_file: 
     root = Path(repo_root).resolve(strict=True)
     audit, record, audit_bytes = _load_audit(audit_file, root)
     try:
-        envelope = json.loads(Path(attestation_file).read_text(encoding="utf-8"))
+        raw_attestation = Path(attestation_file).expanduser()
+        if raw_attestation.is_symlink() or not raw_attestation.resolve(strict=True).is_file():
+            raise LifecycleEvidenceError("reviewer attestation must be a regular non-symlink file")
+        envelope = json.loads(raw_attestation.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise LifecycleEvidenceError(f"cannot read reviewer attestation: {exc}") from exc
     if not isinstance(envelope, dict) or envelope.get("schema") != "tsar/reviewer-attestation/v1":
@@ -279,11 +286,16 @@ def verify_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
             if gate not in key["allowed_gates"]:
                 raise LifecycleEvidenceError("reviewer is not authorized for this gate")
             expected_fields = {
+                "audit_path": audit.relative_to(root).as_posix(),
+                "audit_sha256": payload.get("audit_sha256"),
                 "gate": gate, "decision": entry["decision"], "actor": key["actor"],
                 "key_id": key_id, "evidence_path": entry["path"],
                 "evidence_sha256": digest, "evidence_size_bytes": size,
                 "upstream_commit_sha": record.get("provenance", {}).get("upstream_commit_sha"),
             }
+            if (not isinstance(payload.get("audit_sha256"), str) or len(payload["audit_sha256"]) != 64
+                    or any(ch not in "0123456789abcdef" for ch in payload["audit_sha256"])):
+                raise LifecycleEvidenceError("signed audit snapshot digest is invalid")
             if any(payload.get(name) != value for name, value in expected_fields.items()):
                 raise LifecycleEvidenceError("signed reviewer payload does not match audit entry")
             signature = _verify_signature(payload, envelope.get("signature", ""), key)
