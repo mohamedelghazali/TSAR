@@ -291,6 +291,8 @@ def verify_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
             if not isinstance(envelope, dict) or envelope.get("schema") != "tsar/reviewer-attestation/v1":
                 raise LifecycleEvidenceError("missing signed reviewer attestation")
             key_id = envelope.get("key_id")
+            if not isinstance(key_id, str):
+                raise LifecycleEvidenceError("reviewer key ID must be a string")
             key = keys.get(key_id)
             payload = envelope.get("payload")
             if key is None or not isinstance(payload, dict):
@@ -298,16 +300,24 @@ def verify_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
             if gate not in key["allowed_gates"]:
                 raise LifecycleEvidenceError("reviewer is not authorized for this gate")
             expected_fields = {
+                "schema": "tsar/reviewer-attestation-payload/v1",
                 "audit_path": audit.relative_to(root).as_posix(),
                 "audit_sha256": payload.get("audit_sha256"),
                 "gate": gate, "decision": entry["decision"], "actor": key["actor"],
                 "key_id": key_id, "evidence_path": entry["path"],
                 "evidence_sha256": digest, "evidence_size_bytes": size,
                 "upstream_commit_sha": provenance.get("upstream_commit_sha"),
+                "issued_at": entry.get("recorded_at"),
             }
             if (not isinstance(payload.get("audit_sha256"), str) or len(payload["audit_sha256"]) != 64
                     or any(ch not in "0123456789abcdef" for ch in payload["audit_sha256"])):
                 raise LifecycleEvidenceError("signed audit snapshot digest is invalid")
+            try:
+                issued = datetime.fromisoformat(str(payload.get("issued_at", "")).replace("Z", "+00:00"))
+                if issued.tzinfo is None or issued > datetime.now(timezone.utc) + timedelta(minutes=5):
+                    raise ValueError("invalid attestation timestamp")
+            except ValueError as exc:
+                raise LifecycleEvidenceError("signed reviewer timestamp is invalid") from exc
             if any(payload.get(name) != value for name, value in expected_fields.items()):
                 raise LifecycleEvidenceError("signed reviewer payload does not match audit entry")
             signature = _verify_signature(payload, envelope.get("signature", ""), key)
