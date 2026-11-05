@@ -7,7 +7,7 @@
 | `tsar inventory [path]` | Cryptographic inventory |
 | `tsar lint` | Validate TSAR rules |
 | `tsar version` | Compare local/remote manifest version |
-| `tsar drift` | Detect drift between local and remote manifest |
+| `tsar drift` | Detect drift between local and remote manifest (legacy version/file-set comparison) |\n| `tsar verify-upstream [--domain NAME]` | Pin upstream to one commit, validate manifest and all active paths, and fetch core plus selected domain rules (fail-closed) |
 | `tsar threat-model <file>` | STRIDE threat model |
 | `tsar report [path] [--format html\|json]` | Full report |
 | `tsar compliance <framework>` | Compliance reference check |
@@ -26,4 +26,4 @@ tsar init . --agent cursor
 ## Exit Codes
 - 0: clean.
 - 1: findings or drift.
-- 2: tooling error.
+- 2: verification/tooling failure (preflight fails closed).

@@ -42,10 +42,7 @@ Yes. Fork the repository or create a project-specific overlay directory that ext
 
 ## What does "fail closed" mean in practice?
 If the manifest cannot be fetched, or rules cannot be loaded:
-- The agent enters ADVISORY mode.
-- Tier-1 work (auth, crypto, payments, health) is refused.
-- All other output is marked "requires manual security review".
-- The agent does not silently fall back to unsafe defaults.
+- If the current trusted manifest has `fail_closed: true` or disables advisory fallback, security-sensitive implementation stops when the manifest or required rules cannot be fetched and verified. Advisory mode is permitted only when the trusted manifest explicitly sets `allow_advisory_fallback: true` and `fail_closed: false`. Do not silently downgrade.
 
 ## How does TSAR handle secrets in logs?
 `rules/data/logging-redaction.md` requires redaction at emission. The secure review scanner flags obvious patterns. Runtime redaction must be implemented in the application; TSAR provides the rule and examples.

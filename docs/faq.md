@@ -6,8 +6,7 @@ enforcing defense-in-depth and failing closed on known-dangerous patterns.
 Residual risk depends on the surrounding codebase, deployment, and operations.
 
 ## What happens if the manifest fetch fails?
-The agent enters ADVISORY mode and marks output for manual security review.
-It does not silently proceed with unsafe defaults.
+The agent follows the current manifest's configured behavior. The current TSAR manifest is fail-closed and disables advisory fallback, so security-sensitive implementation must stop if the manifest or required policy files cannot be verified. Advisory fallback is allowed only if a trusted current manifest explicitly enables it and disables fail-closed behavior.
 
 ## Can I add custom rules?
 Yes. Place them in `rules/`, add to `manifest.yaml`, run `scripts/lint_rules.py`,
