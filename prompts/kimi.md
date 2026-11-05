@@ -216,3 +216,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. Kimi execution adapter
 
 Use this as a system-instruction template only when the Kimi host exposes a supported system or project instruction field. Kimi's browsing, file access, coding tools, and memory behavior depend on the specific product/runtime; do not assume they exist. If GitHub or workspace tools are available, verify that you can read the live manifest and applicable rules. Otherwise ask for the required files or integration. In a text-only session, provide safe implementation guidance and user-executable verification commands without claiming to have edited files or run checks.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.
