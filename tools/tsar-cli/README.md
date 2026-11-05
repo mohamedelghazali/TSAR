@@ -38,19 +38,37 @@ tsar init . --agent cursor
 
 ## Lifecycle audit verification
 
-Run `tsar lifecycle-verify --audit-file .tsar/runs/run.json` to re-hash every recorded evidence file, detect missing or modified files, and check that each completed gate has one matching evidence entry. Exit code 0 means the local evidence is consistent; 1 means verification findings; 2 means the audit could not be verified.
+Run `tsar lifecycle-verify --audit-file .tsar/runs/run.json --trusted-reviewers C:/secure/tsar/trusted-reviewers.json` to re-hash every evidence file and verify each Ed25519 reviewer signature against an external trust keyring. Exit code 0 means the local evidence and signatures are consistent; 1 means verification findings; 2 means the audit or trust store could not be verified.
 
-This verifies file integrity relative to the local record only. It does not detect coordinated changes to both the record and evidence, authenticate the actor, or prove the evidence is truthful. Use signed attestations and an independently protected append-only log for those guarantees.
+## Authenticated lifecycle evidence
 
-## Lifecycle evidence boundaries
+A gate can no longer be approved by supplying an arbitrary `--actor` label. `lifecycle-evidence` requires a detached Ed25519 signature and an external trusted reviewer keyring. The keyring maps key IDs to reviewer labels, raw Ed25519 public keys (Base64), active status, and permitted gate names:
 
-`lifecycle-evidence` accepts only non-empty regular evidence files inside the TSAR project root, rejects symlink paths and path traversal, records SHA-256, size, actor label, timestamp, and PASS/FAIL decision, and updates only a PENDING gate. The upstream preflight gate cannot be overridden. The actor label is not authenticated, evidence content is not semantically validated, and the local audit file is not tamper-proof or signed.
+```json
+{
+  "schema": "tsar/trusted-reviewers/v1",
+  "keys": [{
+    "key_id": "security-reviewer-01",
+    "actor": "reviewer@example.org",
+    "public_key": "BASE64_RAW_32_BYTE_ED25519_PUBLIC_KEY",
+    "allowed_gates": ["core_policy_review", "independent_security_review"],
+    "active": true
+  }]
+}
+```
+
+Keep this keyring outside the repository, restrict write access (POSIX mode 0600 or stricter), and protect private keys separately. The reviewer signs the canonical UTF-8 JSON representation of the payload (sorted keys, compact separators, no ASCII escaping). The payload must contain schema `tsar/reviewer-attestation-payload/v1`, audit path and SHA-256 snapshot, upstream commit, gate, decision, key ID, reviewer identity, evidence path/hash/size, and timezone-aware issue time. The signed envelope schema is `tsar/reviewer-attestation/v1` and contains `key_id`, `payload`, and Base64 `signature`.
+
+The payload can be prepared with `build_attestation_payload()` from `lifecycle_evidence.py`; sign its canonical JSON bytes with the trusted key's Ed25519 private key, then store the envelope JSON as the `--attestation` file. The verifier derives the actor from the external keyring; it never trusts an actor string supplied on the command line.
 
 Example:
 
 ```bash
-tsar lifecycle-evidence --audit-file .tsar/runs/run.json --gate core_policy_review --evidence evidence/core-review.md --actor reviewer@example.org --decision PASS
+tsar lifecycle-evidence --audit-file .tsar/runs/run.json --gate core_policy_review --evidence evidence/core-review.md --attestation evidence/reviewer-attestation.json --trusted-reviewers C:/secure/tsar/trusted-reviewers.json
+tsar lifecycle-verify --audit-file .tsar/runs/run.json --trusted-reviewers C:/secure/tsar/trusted-reviewers.json
 ```
+
+Legacy unsigned evidence is intentionally reported as unauthenticated. A valid signature proves possession of a trusted private key and authorization encoded in the external keyring; it does not independently prove the human's identity, evidence truth, reviewer independence, or organizational authority. Protect the keyring and private keys with an independently administered process. The audit record remains locally mutable/deletable; signed events or an external append-only log are still required for tamper resistance.
 
 ## Lifecycle planning boundaries
 
