@@ -85,7 +85,7 @@ def attest_gate(audit_file: Path, *, repo_root: Path, gate: str,
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 json.dump(current, stream, indent=2, ensure_ascii=False)
-                stream.write("\\n")
+                stream.write("\n")
                 stream.flush()
                 os.fsync(stream.fileno())
             os.chmod(temp_name, 0o600)
