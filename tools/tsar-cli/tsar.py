@@ -106,6 +106,27 @@ def cmd_lifecycle_plan(args) -> int:
     return 0
 
 
+
+def cmd_lifecycle_start(args) -> int:
+    """Start a lifecycle run only after evidence-backed upstream preflight."""
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_orchestrator import LifecycleStartError, start_lifecycle
+
+    try:
+        record = start_lifecycle(
+            args.task,
+            repo_root=ROOT,
+            audit_file=Path(args.audit_file),
+            domains=args.domain,
+            impact=args.impact,
+        )
+    except LifecycleStartError as exc:
+        print(f"Lifecycle start BLOCKED: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(record, indent=2, ensure_ascii=False))
+    print(f"Audit record: {Path(args.audit_file)}")
+    return 0
+
 def cmd_verify_upstream(args) -> int:
     """Verify the authoritative upstream snapshot before security-sensitive work."""
     script = Path(__file__).resolve().with_name("verify_upstream.py")
@@ -398,6 +419,14 @@ def main() -> int:
     lp.add_argument("--domain", action="append", default=[], help="Explicit applicable manifest domain; repeat as needed")
     lp.add_argument("--impact", choices=["auto", "standard", "high"], default="auto")
     lp.set_defaults(func=cmd_lifecycle_plan)
+
+
+    ls = sub.add_parser("lifecycle-start", help="Start an evidence-backed TSAR lifecycle run")
+    ls.add_argument("task", help="Engineering task description")
+    ls.add_argument("--audit-file", required=True, help="New audit JSON path; existing files are never overwritten")
+    ls.add_argument("--domain", action="append", default=[], help="Applicable manifest domain; repeat as needed")
+    ls.add_argument("--impact", choices=["auto", "standard", "high"], default="auto")
+    ls.set_defaults(func=cmd_lifecycle_start)
 
     u = sub.add_parser("verify-upstream")
     u.add_argument("--domain", action="append", default=[],
