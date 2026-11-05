@@ -27,3 +27,4 @@ tsar init . --agent cursor
 - 0: clean.
 - 1: findings or drift.
 - 2: verification/tooling failure (preflight fails closed).
+\n## Lifecycle planning boundaries\n\n`lifecycle-plan` is a deterministic planning aid. Keyword classification can miss context or select extra domains; operators must confirm the applicable domains and impact before implementation. A plan is not a security approval, does not execute scanners, and does not mark gates as passed. High-impact tasks require the listed additional review gates.\n
