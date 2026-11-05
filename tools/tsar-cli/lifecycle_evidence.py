@@ -102,3 +102,77 @@ def attest_gate(audit_file: Path, *, repo_root: Path, gate: str,
         except OSError:
             pass
     return current
+
+
+def verify_audit(audit_file: Path, *, repo_root: Path) -> dict:
+    """Re-hash every referenced evidence file and check gate/evidence consistency.
+
+    This detects missing or modified evidence relative to the local audit record;
+    it cannot detect coordinated edits to both the evidence and the unsigned record.
+    """
+    root = Path(repo_root).resolve(strict=True)
+    raw_audit = Path(audit_file).expanduser()
+    if raw_audit.is_symlink():
+        raise LifecycleEvidenceError("audit symlinks are not accepted")
+    audit = raw_audit.resolve(strict=True)
+    if not audit.is_file() or not audit.is_relative_to(root):
+        raise LifecycleEvidenceError("audit file must be a regular file inside the project root")
+    try:
+        record = json.loads(audit.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise LifecycleEvidenceError(f"cannot read lifecycle audit record: {exc}") from exc
+    if record.get("schema") != "tsar/lifecycle-run/v1":
+        raise LifecycleEvidenceError("unsupported lifecycle audit schema")
+    gates = record.get("gates")
+    entries = record.get("evidence", [])
+    if not isinstance(gates, dict) or not isinstance(entries, list):
+        raise LifecycleEvidenceError("audit gates or evidence collection has an invalid shape")
+
+    seen = set()
+    findings = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            findings.append({"index": index, "status": "INVALID", "reason": "evidence entry is not an object"})
+            continue
+        gate = entry.get("gate")
+        if not isinstance(gate, str) or gate not in gates or gate == "upstream_preflight":
+            findings.append({"index": index, "status": "INVALID", "reason": "unknown or reserved evidence gate"})
+            continue
+        if gate in seen:
+            findings.append({"index": index, "gate": gate, "status": "INVALID", "reason": "duplicate evidence entry for gate"})
+            continue
+        seen.add(gate)
+        if entry.get("decision") not in {"PASS", "FAIL"} or gates.get(gate) != entry.get("decision"):
+            findings.append({"index": index, "gate": gate, "status": "INVALID", "reason": "gate decision does not match evidence"})
+            continue
+        try:
+            evidence_path, digest, size = _safe_evidence(root, entry.get("path", ""))
+        except (LifecycleEvidenceError, OSError) as exc:
+            findings.append({"index": index, "gate": gate, "status": "MISSING_OR_UNSAFE", "reason": str(exc)})
+            continue
+        if digest != entry.get("sha256") or size != entry.get("size_bytes"):
+            findings.append({
+                "index": index, "gate": gate, "status": "HASH_MISMATCH",
+                "expected_sha256": entry.get("sha256"), "actual_sha256": digest,
+                "expected_size_bytes": entry.get("size_bytes"), "actual_size_bytes": size,
+            })
+        else:
+            findings.append({"index": index, "gate": gate, "status": "PASS", "sha256": digest})
+
+    for gate, state in gates.items():
+        if gate != "upstream_preflight" and state in {"PASS", "FAIL"} and gate not in seen:
+            findings.append({"gate": gate, "status": "INVALID", "reason": "gate has a decision but no evidence entry"})
+
+    valid = all(item["status"] == "PASS" for item in findings)
+    return {
+        "schema": "tsar/lifecycle-audit-verification/v1",
+        "audit_file": audit.relative_to(root).as_posix(),
+        "status": "PASS" if valid else "FAIL",
+        "evidence_count": len(entries),
+        "findings": findings,
+        "limitations": [
+            "Verification checks local evidence bytes against hashes in the audit record.",
+            "The audit record is unsigned; coordinated modification of evidence and record is not detected.",
+            "A matching hash does not establish evidence truth, author identity, or approval authority.",
+        ],
+    }

@@ -143,6 +143,19 @@ def cmd_lifecycle_evidence(args) -> int:
     return 0
 
 
+def cmd_lifecycle_verify(args) -> int:
+    """Verify recorded lifecycle evidence against current file bytes."""
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_evidence import LifecycleEvidenceError, verify_audit
+    try:
+        result = verify_audit(Path(args.audit_file), repo_root=ROOT)
+    except LifecycleEvidenceError as exc:
+        print(f"Lifecycle audit verification ERROR: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result["status"] == "PASS" else 1
+
+
 def cmd_verify_upstream(args) -> int:
     """Verify the authoritative upstream snapshot before security-sensitive work."""
     script = Path(__file__).resolve().with_name("verify_upstream.py")
@@ -451,6 +464,10 @@ def main() -> int:
     le.add_argument("--actor", required=True, help="Reviewer or operator identifier (not authenticated)")
     le.add_argument("--decision", choices=["PASS", "FAIL"], default="PASS")
     le.set_defaults(func=cmd_lifecycle_evidence)
+
+    lv = sub.add_parser("lifecycle-verify", help="Re-hash and verify lifecycle audit evidence")
+    lv.add_argument("--audit-file", required=True, help="Lifecycle audit JSON path")
+    lv.set_defaults(func=cmd_lifecycle_verify)
 
     u = sub.add_parser("verify-upstream")
     u.add_argument("--domain", action="append", default=[],
