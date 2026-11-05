@@ -3,10 +3,10 @@ name = "tsar-cli"
 version = "1.1.1"
 description = "TSAR security CLI"
 requires-python = ">=3.10"
-dependencies = ["pyyaml>=6.0.0"]
+dependencies = ["pyyaml>=6.0.0", "cryptography>=42.0.0"]
 
 [project.scripts]
 tsar = "tsar:main"
 
 [tool.setuptools]
-py-modules = ["tsar", "sarif"]
+py-modules = ["tsar", "sarif", "verify_upstream", "lifecycle_engine", "lifecycle_orchestrator", "lifecycle_evidence"]

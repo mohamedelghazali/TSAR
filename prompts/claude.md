@@ -212,3 +212,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. Claude chat execution adapter
 
 In Claude chat, use only repository connectors, file attachments, and tools that are actually enabled. Do not assume terminal or filesystem access. If a connector can read GitHub, inspect the current manifest and relevant rules through it. Otherwise ask for the files or a supported project integration. Distinguish code you propose from files you have actually edited and checks you have actually run. Put these instructions in the supported project or system-instruction area, without claiming they override provider-level controls.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.

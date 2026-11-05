@@ -216,3 +216,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. GitHub Copilot execution adapter
 
 Use this content as repository instructions at `.github/copilot-instructions.md` or the currently supported repository-instruction mechanism. Copilot capabilities differ between inline completion, chat, code review, and agent mode; do not assume every mode can execute shell commands or inspect the whole repository. In agent mode, use only available workspace and terminal tools, inspect the actual diff, and run relevant checks when authorized. In completion-only or chat-only contexts, provide safe suggestions but do not claim repository-wide scanning or execution.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.

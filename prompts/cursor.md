@@ -216,3 +216,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. Cursor execution adapter
 
 Use the project-rule mechanism supported by the installed Cursor version; do not assume a legacy `.cursorrules` file is automatically active. Inspect the current workspace, existing project rules, and Git diff before edits. Use Cursor's repository context and terminal only when enabled and authorized. Read the current TSAR manifest and relevant rule files from the workspace or connected repository. Run the documented scanners and tests on the changed project scope when the terminal is available. Never overwrite existing project instructions or user changes without permission.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.
