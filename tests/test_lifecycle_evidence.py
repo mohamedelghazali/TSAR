@@ -1,5 +1,6 @@
 """Tests for cryptographically authenticated lifecycle gate attestations."""
 import base64
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -144,3 +145,40 @@ def test_only_pending_gates_can_be_attested(tmp_path):
         build_attestation_payload(audit, repo_root=root, gate="core_policy_review",
                                   evidence_file="evidence/review.txt", key_id="reviewer-01",
                                   keyring_file=keyring)
+
+
+
+@pytest.mark.parametrize("path", ["../outside.txt", "/tmp/evidence.txt"])
+def test_path_escape_is_rejected(tmp_path, path):
+    root, audit, keyring, private = setup_run(tmp_path)
+    with pytest.raises(LifecycleEvidenceError):
+        build_attestation_payload(audit, repo_root=root, gate="core_policy_review",
+                                  evidence_file=path, key_id="reviewer-01",
+                                  keyring_file=keyring)
+
+
+def test_symlink_evidence_is_rejected(tmp_path):
+    root, audit, keyring, private = setup_run(tmp_path)
+    (root / "evidence" / "link.txt").symlink_to(root / "evidence" / "review.txt")
+    with pytest.raises(LifecycleEvidenceError, match="symlinks"):
+        build_attestation_payload(audit, repo_root=root, gate="core_policy_review",
+                                  evidence_file="evidence/link.txt", key_id="reviewer-01",
+                                  keyring_file=keyring)
+
+
+def test_upstream_preflight_cannot_be_overridden(tmp_path):
+    root, audit, keyring, private = setup_run(tmp_path)
+    with pytest.raises(LifecycleEvidenceError, match="reserved"):
+        build_attestation_payload(audit, repo_root=root, gate="upstream_preflight",
+                                  evidence_file="evidence/review.txt", key_id="reviewer-01",
+                                  keyring_file=keyring)
+
+
+def test_fail_decision_is_preserved_in_signed_attestation(tmp_path):
+    root, audit, keyring, private = setup_run(tmp_path)
+    attestation = sign_request(root, audit, keyring, private, decision="FAIL")
+    result = attest_gate(audit, repo_root=root, gate="core_policy_review",
+                         evidence_file="evidence/review.txt", attestation_file=attestation,
+                         trusted_reviewers_file=keyring)
+    assert result["gates"]["core_policy_review"] == "FAIL"
+    assert verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)["status"] == "PASS"
