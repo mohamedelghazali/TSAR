@@ -24,7 +24,7 @@ TSAR does not assume:
 | Failure | Detection | Response |
 |---|---|---|
 | Agent ignores rules | Scan finds violation | Block commit, reopen prompt |
-| Manifest unreachable | `tsar version` fails | ADVISORY mode, manual review |
+Follow the trusted manifest configuration. Under the current fail-closed configuration, stop security-sensitive implementation when the manifest or required rules are unavailable; Advisory fallback is permitted only when explicitly enabled by a trusted manifest with fail-closed disabled.
 | Rule outdated | Upstream standards changed | Auto-update opens PR |
 | Scanner false negative | Not detected | Complementary SAST required |
 | Malicious tool output | Provenance tagging | Treated as data, not instruction |

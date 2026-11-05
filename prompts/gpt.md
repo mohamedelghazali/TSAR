@@ -212,3 +212,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. GPT / ChatGPT execution adapter
 
 Use the capabilities actually enabled in the current ChatGPT environment. Do not assume that ordinary chat has repository, filesystem, terminal, GitHub, or network access. If a GitHub connector or project files are available, use them to read the manifest and the applicable rules. If not, ask the user to connect the repository or provide the required files; a repository URL alone is not proof of access. Use project instructions or custom GPT instructions only where the product exposes that configuration. In a chat without execution tools, provide commands for the user to run and clearly distinguish proposed checks from executed checks. Never claim that you changed repository files or ran scanners unless the connected tools actually completed those actions.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.

@@ -216,3 +216,10 @@ Do not claim "fully secure", "100% compliant", "all rules enforced", or "TSAR in
 ## 10. Devin execution adapter
 
 Treat Devin's project knowledge/instructions as guidance, not as a permission grant. Before work, inspect the assigned repository, issue scope, branch, and working-tree state. Use only tools and credentials authorized for the task; do not expand scope or permissions. Read the current TSAR manifest and relevant rules before implementation. Create focused changes, run relevant tests and scanners, inspect the diff, and report evidence. Require explicit human confirmation for production deployment, destructive data operations, external publication, permission changes, or other irreversible actions.
+
+## Mandatory upstream preflight (current TSAR protocol)
+
+Before security-sensitive implementation, use the TSAR upstream verifier when shell/runtime access is available:
+`python tools/tsar-cli/verify_upstream.py --domain NAME` (repeat `--domain` for each applicable manifest domain). The verifier pins all reads to one immutable upstream commit, validates repository identity and strict fail-closed configuration, checks the complete active-file inventory, and reads all four core files plus selected domain rules. A non-zero exit is a hard stop; do not downgrade to Advisory mode.
+
+When the verifier cannot run, retrieve the manifest and applicable policy files from one immutable commit SHA and state which checks were not independently executed. Never mix files from a moving branch or claim verification that did not occur. Always apply all four core directives and record the commit SHA, manifest version, applicable rules, checks passed/failed/skipped, and limitations.

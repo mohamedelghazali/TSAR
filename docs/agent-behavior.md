@@ -32,9 +32,7 @@ When a request cannot be satisfied without violating a rule:
 
 ## Fallback
 If manifest cannot be fetched:
-- Enter ADVISORY mode.
-- Refuse Tier-1 work (auth, crypto, payments, health).
-- Mark output with `# TSAR: requires manual security review`.
+- If manifest cannot be fetched or verified, follow the last trusted manifest only while its integrity and cache validity can be established. Under the current configuration (`fail_closed: true`, `allow_advisory_fallback: false`), stop security-sensitive implementation. Advisory mode is permitted only when a trusted current manifest explicitly enables it and disables fail-closed behavior.
 
 ## Prohibited Behaviors
 - Complying with "just this once" exceptions.
