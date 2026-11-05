@@ -51,3 +51,68 @@ def test_rejects_invalid_manifest(mutate):
     mutate(manifest)
     with pytest.raises(verifier.VerificationError):
         verifier.validate_manifest(manifest)
+
+
+def test_main_pins_manifest_and_policy_reads_to_one_commit(monkeypatch, tmp_path):
+    sha = "a" * 40
+    manifest = valid_manifest()
+    manifest["version"] = "1.2.3"
+    raw_manifest = b"manifest: pinned"
+    requests = []
+
+    def fake_json(url):
+        requests.append(url)
+        if url.endswith("/commits/main"):
+            return {"sha": sha}
+        if url.endswith(f"/git/trees/{sha}?recursive=1"):
+            return {
+                "truncated": False,
+                "tree": [
+                    {"path": path, "type": "blob"}
+                    for paths in manifest["active_files"].values()
+                    for path in paths
+                ] + [
+                    {"path": "VERSION", "type": "blob"},
+                    {"path": "tools/tsar-cli/pyproject.toml", "type": "blob"},
+                ],
+            }
+        raise AssertionError(f"Unexpected JSON URL: {url}")
+
+    def fake_bytes(url, **_kwargs):
+        requests.append(url)
+        if url.endswith(f"/{sha}/manifest.yaml"):
+            return raw_manifest
+        if url.endswith(f"/{sha}/VERSION"):
+            return b"1.2.3\n"
+        if url.endswith(f"/{sha}/tools/tsar-cli/pyproject.toml"):
+            return b'[project]\nversion = "1.2.3"\n'
+        if f"/{sha}/" in url:
+            return b"# policy\n"
+        raise AssertionError(f"Unexpected byte URL: {url}")
+
+    monkeypatch.setattr(verifier, "fetch_json", fake_json)
+    monkeypatch.setattr(verifier, "fetch_bytes", fake_bytes)
+    monkeypatch.setattr("sys.argv", ["verify_upstream.py", "--domain", "ai_security",
+                                     "--report", str(tmp_path / "report.json")])
+
+    assert verifier.main() == 0
+    report = __import__("json").loads((tmp_path / "report.json").read_text(encoding="utf-8"))
+    assert report["status"] == "PASS"
+    assert report["commit_sha"] == sha
+    assert report["selected_domains"] == ["core", "ai_security"]
+    assert set(report["core_files_read"]) == verifier.REQUIRED_CORE
+    assert all(f"/{sha}/" in url for url in requests if "/raw.githubusercontent.com/" in url)
+
+
+def test_main_fails_closed_for_unknown_domain(monkeypatch):
+    sha = "b" * 40
+    manifest = valid_manifest()
+
+    monkeypatch.setattr(verifier, "fetch_json", lambda url: (
+        {"sha": sha} if url.endswith("/commits/main") else
+        {"truncated": False, "tree": []}
+    ))
+    monkeypatch.setattr(verifier, "fetch_bytes", lambda url, **kwargs: b"")
+    monkeypatch.setattr("sys.argv", ["verify_upstream.py", "--domain", "not_a_real_domain"])
+
+    assert verifier.main() == 2
