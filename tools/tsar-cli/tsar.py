@@ -127,6 +127,22 @@ def cmd_lifecycle_start(args) -> int:
     print(f"Audit record: {Path(args.audit_file)}")
     return 0
 
+def cmd_lifecycle_evidence(args) -> int:
+    """Attach hashed evidence to one pending lifecycle gate."""
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_evidence import LifecycleEvidenceError, attest_gate
+    try:
+        record = attest_gate(
+            Path(args.audit_file), repo_root=ROOT, gate=args.gate,
+            evidence_file=args.evidence, actor=args.actor, decision=args.decision,
+        )
+    except LifecycleEvidenceError as exc:
+        print(f"Lifecycle evidence REJECTED: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(record, indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_verify_upstream(args) -> int:
     """Verify the authoritative upstream snapshot before security-sensitive work."""
     script = Path(__file__).resolve().with_name("verify_upstream.py")
@@ -427,6 +443,14 @@ def main() -> int:
     ls.add_argument("--domain", action="append", default=[], help="Applicable manifest domain; repeat as needed")
     ls.add_argument("--impact", choices=["auto", "standard", "high"], default="auto")
     ls.set_defaults(func=cmd_lifecycle_start)
+
+    le = sub.add_parser("lifecycle-evidence", help="Attach hashed evidence to a pending lifecycle gate")
+    le.add_argument("--audit-file", required=True, help="Existing lifecycle audit JSON path")
+    le.add_argument("--gate", required=True, help="Gate name from the lifecycle audit record")
+    le.add_argument("--evidence", required=True, help="Evidence file path relative to the TSAR project root")
+    le.add_argument("--actor", required=True, help="Reviewer or operator identifier (not authenticated)")
+    le.add_argument("--decision", choices=["PASS", "FAIL"], default="PASS")
+    le.set_defaults(func=cmd_lifecycle_evidence)
 
     u = sub.add_parser("verify-upstream")
     u.add_argument("--domain", action="append", default=[],
