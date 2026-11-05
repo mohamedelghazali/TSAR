@@ -35,6 +35,16 @@ tsar init . --agent cursor
 - 1: findings or drift.
 - 2: verification/tooling failure (preflight fails closed).
 
+## Lifecycle evidence boundaries
+
+`lifecycle-evidence` accepts only non-empty regular evidence files inside the TSAR project root, rejects symlink paths and path traversal, records SHA-256, size, actor label, timestamp, and PASS/FAIL decision, and updates only a PENDING gate. The upstream preflight gate cannot be overridden. The actor label is not authenticated, evidence content is not semantically validated, and the local audit file is not tamper-proof or signed.
+
+Example:
+
+```bash
+tsar lifecycle-evidence --audit-file .tsar/runs/run.json --gate core_policy_review --evidence evidence/core-review.md --actor reviewer@example.org --decision PASS
+```
+
 ## Lifecycle planning boundaries
 
 `lifecycle-plan` is a deterministic planning aid. Keyword classification can miss context or select extra domains; operators must confirm the applicable domains and impact before implementation. A plan is not a security approval, does not execute scanners, and does not mark gates as passed. High-impact tasks require the listed additional review gates.
