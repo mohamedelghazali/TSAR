@@ -182,3 +182,30 @@ def test_fail_decision_is_preserved_in_signed_attestation(tmp_path):
                          trusted_reviewers_file=keyring)
     assert result["gates"]["core_policy_review"] == "FAIL"
     assert verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)["status"] == "PASS"
+
+
+
+def test_modified_signature_bytes_are_rejected(tmp_path):
+    root, audit, keyring, private = setup_run(tmp_path)
+    attestation = sign_request(root, audit, keyring, private)
+    envelope = json.loads(attestation.read_text())
+    raw = bytearray(base64.b64decode(envelope["signature"]))
+    raw[0] ^= 1
+    envelope["signature"] = base64.b64encode(raw).decode()
+    attestation.write_text(json.dumps(envelope))
+    with pytest.raises(LifecycleEvidenceError, match="signature is invalid"):
+        attest_gate(audit, repo_root=root, gate="core_policy_review",
+                    evidence_file="evidence/review.txt", attestation_file=attestation,
+                    trusted_reviewers_file=keyring)
+
+
+def test_malformed_reviewer_key_id_in_audit_fails_closed(tmp_path):
+    root, audit, keyring, private = setup_run(tmp_path)
+    attestation = sign_request(root, audit, keyring, private)
+    attest_gate(audit, repo_root=root, gate="core_policy_review",
+                evidence_file="evidence/review.txt", attestation_file=attestation,
+                trusted_reviewers_file=keyring)
+    data = json.loads(audit.read_text())
+    data["evidence"][0]["attestation"]["key_id"] = []
+    audit.write_text(json.dumps(data))
+    assert verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)["status"] == "FAIL"
