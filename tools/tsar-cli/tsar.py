@@ -371,8 +371,8 @@ def main() -> int:
     c.set_defaults(func=cmd_compliance)
 
     u = sub.add_parser("verify-upstream")
-    u.add_argument("--domain", action="append", default=[],
-                   help="Applicable manifest domain; repeat as needed")
+    u.add_argument("--domain", action="append", required=True,
+                   help="Required applicable manifest domain; repeat as needed")
     u.add_argument("--report", help="Write a JSON verification report")
     u.add_argument("--repo-root", help="Optional local TSAR checkout for version checks")
     u.set_defaults(func=cmd_verify_upstream)
