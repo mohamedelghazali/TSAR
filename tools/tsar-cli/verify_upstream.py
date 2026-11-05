@@ -8,6 +8,7 @@ agent obeyed the policy or that the policy is cryptographically signed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -74,7 +75,8 @@ def validate_manifest(manifest: dict[str, Any]) -> tuple[str, dict[str, list[str
     version = manifest.get("version")
     if not isinstance(version, str) or not VERSION_RE.fullmatch(version):
         raise VerificationError("Manifest version is missing or is not valid semantic version text")
-    if manifest.get("repository", "").rstrip("/") != f"https://github.com/{OWNER}/{REPO}":
+    repository = manifest.get("repository")
+    if not isinstance(repository, str) or repository.rstrip("/") != f"https://github.com/{OWNER}/{REPO}":
         raise VerificationError("Manifest repository identity does not match the trusted TSAR repository")
 
     lifecycle = manifest.get("lifecycle")
@@ -139,6 +141,8 @@ def main() -> int:
         "repository": f"{OWNER}/{REPO}",
         "commit_sha": None,
         "manifest_version": None,
+        "manifest_sha256": None,
+        "loaded_policy_sha256": {},
         "core_files_read": [],
         "selected_domains": [],
         "selected_policy_files_read": [],
@@ -176,7 +180,20 @@ def main() -> int:
         manifest = load_yaml(manifest_raw, "pinned manifest.yaml")
         version, groups = validate_manifest(manifest)
         report["manifest_version"] = version
+        report["manifest_sha256"] = hashlib.sha256(manifest_raw).hexdigest()
         passed("validate_manifest", f"Manifest v{version}: strict, fail-closed, canonical repository")
+
+        upstream_version = fetch_bytes(f"{RAW}/{sha}/VERSION").decode("utf-8").strip()
+        pyproject = fetch_bytes(f"{RAW}/{sha}/tools/tsar-cli/pyproject.toml").decode("utf-8")
+        package_match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', pyproject)
+        if not package_match:
+            raise VerificationError("Pinned upstream pyproject.toml has no parseable project version")
+        if upstream_version != version or package_match.group(1) != version:
+            raise VerificationError(
+                "Pinned upstream version mismatch: "
+                f"manifest={version}, VERSION={upstream_version}, pyproject={package_match.group(1)}"
+            )
+        passed("upstream_version_consistency", f"manifest.yaml, VERSION, and CLI package all declare v{version}")
 
         declared_files = [path for paths in groups.values() for path in paths]
         report["active_file_count"] = len(declared_files)
@@ -199,6 +216,7 @@ def main() -> int:
                 data = fetch_bytes(f"{RAW}/{sha}/{encoded}")
                 if not data.strip():
                     raise VerificationError(f"Policy file is empty: {path}")
+                report["loaded_policy_sha256"][path] = hashlib.sha256(data).hexdigest()
                 to_read.append(path)
                 if domain == "core":
                     report["core_files_read"].append(path)
