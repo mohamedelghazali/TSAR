@@ -20,7 +20,6 @@ from reference_host import (
 from tool_boundary import (
     ActionClass,
     AuthorizationContext,
-    ToolBoundaryError,
     ToolSpec,
 )
 
@@ -101,15 +100,6 @@ def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamp
         policy_fetcher=fetcher,
     )
     return host, root, events
-
-
-def run_successful_agent(context):
-    assert set(context.policy_files) == set(CORE) | set(DOMAIN)
-    assert context.policy_instruction.startswith("Before making changes")
-    (context_root / "app.py").write_text("print('safe')\n", encoding="utf-8")
-    return context.dispatch_tool(
-        "repo.write", "write", "repo:demo", {"content": "verified"}
-    )
 
 
 @pytest.fixture
