@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "tsar-cli"))
 from lifecycle_anchor import (
     LifecycleAnchorError, _canonical, _receipt_digest, _run_id, _verify_receipt,
-    _validate_endpoint,
+    _validate_endpoint, _collect_evidence_files,
 )
 
 
@@ -106,3 +106,37 @@ def test_endpoint_must_be_https_and_free_of_embedded_credentials(endpoint):
 
 def test_https_endpoint_is_normalized():
     assert _validate_endpoint("https://anchor.example/base/") == "https://anchor.example/base"
+
+
+
+def test_collect_evidence_files_archives_verified_bytes(tmp_path):
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    source = evidence / "review.txt"
+    payload = b"independent review evidence\n"
+    source.write_bytes(payload)
+    record = {
+        "evidence": [{
+            "path": "evidence/review.txt",
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "size_bytes": len(payload),
+        }]
+    }
+    archived, total = _collect_evidence_files(record, tmp_path)
+    assert total == len(payload)
+    assert base64.b64decode(archived["evidence/review.txt"]) == payload
+
+
+def test_collect_evidence_files_rejects_changed_evidence(tmp_path):
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    (evidence / "review.txt").write_bytes(b"changed")
+    record = {
+        "evidence": [{
+            "path": "evidence/review.txt",
+            "sha256": hashlib.sha256(b"original").hexdigest(),
+            "size_bytes": len(b"original"),
+        }]
+    }
+    with pytest.raises(LifecycleAnchorError, match="changed"):
+        _collect_evidence_files(record, tmp_path)
