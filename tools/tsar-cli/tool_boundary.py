@@ -121,6 +121,23 @@ class ToolBoundary:
         if not isinstance(request, ActionRequest):
             raise ToolBoundaryError("Invalid action request")
         if request.actor != self._authorization.principal:
+            digest = None
+            if isinstance(request.arguments, Mapping):
+                try:
+                    digest = action_digest(request)
+                except ToolBoundaryError:
+                    pass
+            self._audit({
+                "schema": "tsar/tool-boundary-event/v1",
+                "decision": Decision.DENY.value,
+                "tool": request.tool,
+                "operation": request.operation,
+                "resource": request.resource,
+                "actor": self._authorization.principal,
+                "claimed_actor": request.actor,
+                "action_sha256": digest,
+                "reason": "actor_mismatch",
+            })
             raise ToolBoundaryError("Action actor does not match authenticated principal")
         if not isinstance(request.arguments, Mapping):
             raise ToolBoundaryError("Action arguments must be a mapping")
