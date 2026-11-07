@@ -1,85 +1,93 @@
 # TSAR Release Qualification
 
-This document records repository evidence and owner decisions for the v1.1.1 release. It distinguishes automated repository checks from external approvals and deployment validation.
+This document separates the historical v1.1.1 release qualification from verification of the current `main` snapshot. A successful repository CI run is not evidence of a published release or a live cloud deployment.
 
-## Repository Snapshot
+## Historical v1.1.1 Release
 
-- Repository: mohamedelghazali/TSAR
-- Default branch: main
-- Qualified main commit: 61dce3e6d46dd25dfc0ad05617329d7ba89d43a5
-- Qualified tree: a4ba503222ceed395bdb81f48b43ebb313bbeffd
+- Repository: `mohamedelghazali/TSAR`
+- Version: `1.1.1`
+- Tag: `v1.1.1`
+- Qualified commit: `61dce3e6d46dd25dfc0ad05617329d7ba89d43a5`
+- Qualified tree: `a4ba503222ceed395bdb81f48b43ebb313bbeffd`
 - Snapshot reviewed: 2026-10-31
-- Repository visibility: public
-- Repository description: aligned with the AI security governance identity.
-- Active main-branch rulesets: one (TSAR-Main-Protection).
+- GitHub Release: [TSAR v1.1.1 — Stable Release](https://github.com/mohamedelghazali/TSAR/releases/tag/v1.1.1)
+- Published at: 2026-10-31 21:22:51 UTC
 
-## Verified Inventory
+The v1.1.1 qualification below applies only to that historical source snapshot. It must not be interpreted as qualification of later commits now present on `main`.
 
-The repository tree and manifest were compared:
+### Historical evidence
 
-- **171 active rule files** are referenced by manifest.yaml.
-- Those files cover **37 rule domains**.
-- All 171 manifest rule references resolve to existing files.
-- rules/blockchain/README.md is an overview file, not an active rule.
-- **15 agent-specific prompts** exist, plus prompts/universal.md.
-- The compatibility matrix lists the same 15 named agents.
-- VERSION, manifest.yaml, and tools/tsar-cli/pyproject.toml consistently declare version **1.1.1**.
+- The inventory recorded 171 active rule files across 37 rule domains, with all manifest references resolving at that snapshot.
+- The inventory recorded 15 agent-specific prompts plus the universal prompt.
+- The complete release gate passed on the qualified commit; its log reported 186 pytest tests passed.
+- The historical main ruleset and release status were recorded at that time.
+- The GitHub Release had no separately attached binary assets; GitHub provided source archives.
 
-The rule-file count is an inventory measure. It does not mean that every individual rule has been independently validated against every language, framework, or agent.
+The historical inventory and CI evidence are retained as release records, not asserted as a fresh inventory of the current tree.
 
-## CI Evidence
+## Current Main Snapshot — 2026-11-07
 
-The complete release gate passed on qualified main commit 61dce3e6d46dd25dfc0ad05617329d7ba89d43a5:
+- Branch: `main`
+- Commit: `7c76e8a51029b3d1f5ce979632245b71b0fc4484`
+- Commit subject: `feat(worm): implement AWS S3 Object Lock anchor service (#67)`
+- Version files remain at `1.1.1` (`VERSION`, `manifest.yaml`, and `tools/tsar-cli/pyproject.toml`).
+- The `v1.1.1` tag does not point to this commit. The current main snapshot is therefore not represented by the published v1.1.1 tag or its historical release qualification.
 
-- [TSAR Complete Release Gates — 41242004036](https://github.com/mohamedelghazali/TSAR/actions/runs/41242004036) — success; complete verify-all.sh suite.
-- [TSAR Self-Test — 41242003931](https://github.com/mohamedelghazali/TSAR/actions/runs/41242003931) — success.
-- [Infrastructure Validation — 41242003985](https://github.com/mohamedelghazali/TSAR/actions/runs/41242003985) — success.
- 
-The complete verification log reports **186 pytest tests passed**, successful rule linting, compliance-reference checks, secret scanning with no secrets found, orchestrator and report generation, OPA policy checks, LSP build, and Terraform validation. The separate infrastructure workflow also passed Terraform static validation and Kubernetes schema validation.
+### Current CI evidence
 
-The release-gates workflow runs on every pull request to main, every push to main, and manual dispatch. This prevents a path filter from silently omitting the full release gate on documentation-only or other changes.
+The post-merge workflows for the current main commit completed successfully:
 
-## Agent Integration and Enforcement Scope
+- The current commit's release-gates workflow completed successfully.
+- The full verification job reported **266 pytest tests passed** and `ALL CHECKS PASSED`.
+- The post-merge check-run set was reported as **7/7 successful**.
+- Terraform static validation, infrastructure validation, Kubernetes schema validation, TSAR validation, self-test, and orchestrator checks completed successfully.
 
-TSAR has 15 agent-specific instruction files and one universal fallback. These integrations deliver policy guidance through each product's available project or system-instruction mechanism. They are not privileged native provider controls, and prompt compliance cannot be guaranteed.
+This is evidence of repository-level validation for this commit. It is not evidence of a live AWS deployment or an independently audited production environment.
 
-Deterministic repository-level checks require the adopting team to configure and run TSAR scanners, hooks, and CI integrations. TSAR does not guarantee vulnerability-free output and does not replace human security review.
+### Current GitHub governance
 
-## GitHub Governance
+The active ruleset `TSAR-Main-Protection` targets `refs/heads/main` and currently enforces:
 
-The current active ruleset, TSAR-Main-Protection, targets refs/heads/main. It blocks deletion and non-fast-forward updates, requires pull requests, requires resolution of review threads, and requires these status checks:
+- Pull requests for changes to main.
+- Review-thread resolution.
+- No branch deletion.
+- No non-fast-forward updates.
+- Required linear history.
+- Zero required approving reviews.
 
-- TSAR Self-Test
-- TSAR Orchestrator
-- TSAR Validate Rules
-- TSAR Enforce on PR
-- Infrastructure Validation
-- Compliance Reference Check
+The ruleset retrieved for this review does **not** contain a required-status-checks rule. Consequently, successful CI runs are observed evidence, but this ruleset does not currently make those checks a merge prerequisite. The GitHub integration used for this review could read the ruleset but could not update it. Required status checks should be configured by a repository administrator using the exact check names produced by the workflows.
 
-The ruleset currently requires **zero approving reviews**. PR-based changes are enforced, but independent human approval is not. For a security product, one approving review is recommended when a second qualified maintainer is available. The current ruleset is the only active ruleset found; the previously duplicated main ruleset is no longer active.
+A second qualified maintainer's approval is recommended when one is available. No approval requirement is represented as active today.
 
-## Owner Decisions and External Workstreams
+## AWS WORM Service — Implementation vs. Operation
 
-- **AWS workstream:** accepted as complete by the project owner. This records the owner's project decision; repository static Terraform and Kubernetes checks are not represented as live AWS/EKS deployment evidence.
-- **License review:** the project owner confirms that the license was reviewed with an advisor and approved. This record reflects that owner confirmation; it is not an independent legal opinion.
-- The repository retains its custom source-available license. It is not an OSI-approved Open Source license. Commercial use remains subject to the written authorization and commercial licensing terms in LICENSE.
+PR #67 added the AWS Lambda anchor service, Terraform infrastructure, KMS Ed25519 signing, S3 Object Lock COMPLIANCE retention, DynamoDB sequencing/idempotency, trust export tooling, and isolated behavioral/contract tests.
 
-## Published Version and Release
+The following boundaries are explicit:
 
-- Current declared version: **1.1.1**.
-- Git tag: **v1.1.1** — published and resolves to qualified commit 61dce3e6d46dd25dfc0ad05617329d7ba89d43a5.
-- GitHub Release: [TSAR v1.1.1 — Stable Release](https://github.com/mohamedelghazali/TSAR/releases/tag/v1.1.1).
-- Release status: published; not a draft and not marked as a pre-release.
-- Published at: 2026-10-31 21:22:51 UTC.
-- The release currently has no separately attached binary assets. GitHub provides the source archives for the tag.
-- The v2.0 roadmap is proposed work, not the current implementation. Do not publish v2.0.0 from the current 1.1.1 codebase.
+- The service code and infrastructure definitions are present in the repository.
+- CI validates code and infrastructure statically and runs isolated tests.
+- No AWS resources have been deployed by this repository change.
+- No live AWS integration test has been completed.
+- No AWS credentials, production secrets, or deployed endpoints are included in the repository evidence.
+- S3 and DynamoDB do not share a transaction; a retained orphan S3 object can remain if the DynamoDB transaction fails.
 
-The published tag was checked against the qualified commit. The release tag and the tested main tree therefore identify the same source snapshot.
+Therefore, the AWS WORM service is an implemented deployment candidate, **not an operational or production-verified service**. Operational qualification requires an owner-approved AWS deployment and live verification of the deployed controls.
+
+## Staging Scope
+
+A separate Staging environment is **not a required project milestone** for TSAR. The core rules, CLI, OPA/LSP integrations, and GitHub workflows are validated through local tests and CI. If the AWS WORM service is later deployed, it can be validated in an isolated AWS account or explicitly bounded test deployment; this does not create a requirement for a permanent, general-purpose Staging environment.
 
 ## Qualification Decision
 
-**Repository qualification: PASS for the published v1.1.1 release.**
+| Scope | Decision |
+|---|---|
+| Historical v1.1.1 release | Qualified only for its recorded tag and commit |
+| Current main repository CI | Pass on `7c76e8a51029b3d1f5ce979632245b71b0fc4484` |
+| Current main as a new published release | Not qualified as a new release; no new version/tag has been created |
+| AWS WORM operational behavior | Not verified; no live deployment |
+| Separate Staging environment | Not required |
 
-The inventory is consistent, the complete release gate passed, the required CI workflows passed, the main-branch ruleset is active, the project owner has confirmed the AWS and license workstreams as complete, and the stable v1.1.1 tag and GitHub Release are published.
+Do not move or retarget the historical `v1.1.1` tag. A future release based on current main requires an explicit versioning/release decision and a fresh release qualification tied to the exact release commit.
 
-This qualification does not certify the absence of vulnerabilities, provider prompt compliance, regulatory compliance, or live cloud deployment behavior.
+This qualification does not certify absence of vulnerabilities, guaranteed agent prompt compliance, regulatory compliance, or live cloud deployment behavior.
