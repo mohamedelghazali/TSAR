@@ -87,6 +87,8 @@ def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamp
         resources=frozenset({"repo:demo"}),
         required_scope="repo:write",
     )
+    def command(name):
+        return (sys.executable, "-c", "print(0)") if run_real_checks else (name, ".")
     host = ReferenceHost(
         repo_root=root,
         tool_registry={"repo.write": spec},
@@ -95,9 +97,9 @@ def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamp
         approval_verifier=lambda token, digest, actor: True,
         audit_sink=events.append,
         required_checks=[
-            CheckCommand("secret_scan", (sys.executable, "-c", "print(0)"), "secret-scanner", "1.0"),
-            CheckCommand("secure_code_review", (sys.executable, "-c", "print(0)"), "secure-review", "1.0"),
-            CheckCommand("tests", (sys.executable, "-c", "print(0)"), "pytest", "8.0"),
+            CheckCommand("secret_scan", command("secret-scan"), "secret-scanner", "1.0"),
+            CheckCommand("secure_code_review", command("secure-review"), "secure-review", "1.0"),
+            CheckCommand("tests", command("pytest"), "pytest", "8.0"),
         ],
         process_runner=runner,
         policy_fetcher=fetcher,
