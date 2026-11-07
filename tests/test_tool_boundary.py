@@ -62,9 +62,13 @@ def test_registered_scoped_action_dispatches_and_is_audited():
     boundary, events = make_boundary()
     result = boundary.dispatch(request(), lambda args: {"ok": args["message"]})
     assert result == {"ok": "safe change"}
-    assert [event["decision"] for event in events] == ["ALLOW"]
-    assert events[-1]["outcome"] == "EXECUTED"
-    assert len(events[-1]["action_sha256"]) == 64
+    assert len(events) == 2
+    assert events[0]["decision"] == "ALLOW"
+    assert "outcome" not in events[0]
+    assert events[1]["decision"] == "ALLOW"
+    assert events[1]["outcome"] == "EXECUTED"
+    assert events[0]["action_sha256"] == events[1]["action_sha256"]
+    assert len(events[1]["action_sha256"]) == 64
 
 
 @pytest.mark.parametrize(
