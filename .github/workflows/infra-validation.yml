@@ -38,8 +38,10 @@ jobs:
           set -euo pipefail
           terraform -chdir=aws-worm-service/terraform init -backend=false
           terraform -chdir=aws-worm-service/terraform validate
-      - name: Compile AWS WORM Lambda handler
-        run: python -m py_compile aws-worm-service/lambda/handler.py
+      - name: Compile AWS WORM service helpers
+        run: |
+          python -m py_compile aws-worm-service/lambda/handler.py
+          python -m py_compile aws-worm-service/tools/export_service_trust.py
 
   kubernetes:
     name: Kubernetes Schema Validation
