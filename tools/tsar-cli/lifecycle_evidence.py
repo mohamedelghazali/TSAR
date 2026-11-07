@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
 import base64
+import errno
 import hashlib
 import json
 import os
@@ -107,6 +108,8 @@ def _safe_relative_file(root: Path, supplied: str) -> tuple[Path, str, int]:
     try:
         fd = _open_project_file(root, parts)
     except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise LifecycleEvidenceError("symlinks are not accepted in evidence paths") from exc
         raise LifecycleEvidenceError(f"evidence path is missing or unsafe: {exc}") from exc
     digest, size = hashlib.sha256(), 0
     try:
