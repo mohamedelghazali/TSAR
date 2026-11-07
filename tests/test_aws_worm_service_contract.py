@@ -13,6 +13,9 @@ def test_lambda_service_uses_compliance_lock_and_ed25519_kms_signing():
     assert "get_object_retention" in source
     assert "transact_write_items" in source
     assert "hmac.compare_digest" in source
+    assert "audit_snapshot_b64" in source
+    assert "digest(audit_bytes) != record_sha" in source
+    assert "stable_identity" in source
 
 
 def test_terraform_enables_object_lock_versioning_and_deletion_protection():
