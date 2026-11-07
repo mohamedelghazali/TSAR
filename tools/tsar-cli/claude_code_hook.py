@@ -315,23 +315,46 @@ def _audit_file(repo_root: Path, session_id: str) -> Path:
     return base / identity / f"claude-{session}.jsonl"
 
 
+def _assert_no_audit_reparse_points(path: Path) -> None:
+    """Reject symlinks and Windows junctions in every existing audit path component."""
+    absolute = path.absolute()
+    current = Path(absolute.anchor)
+    try:
+        for part in absolute.parts[1:]:
+            current = current / part
+            if current.is_symlink():
+                raise ClaudeHookError("TSAR audit path must not contain symlinks")
+            is_junction = getattr(current, "is_junction", None)
+            if is_junction is not None and is_junction():
+                raise ClaudeHookError("TSAR audit path must not contain junctions")
+    except OSError as exc:
+        raise ClaudeHookError(f"Unable to validate TSAR audit path: {exc}") from exc
+
+
 def _append_audit(path: Path, event: Mapping[str, Any]) -> None:
+    # O_NOFOLLOW is not available on Windows. Check every existing component
+    # before and after opening so a symlink/junction is rejected on all hosts.
+    _assert_no_audit_reparse_points(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    _assert_no_audit_reparse_points(path)
     flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
     fd = os.open(str(path), flags, 0o600)
     try:
+        _assert_no_audit_reparse_points(path)
         data = (json.dumps(dict(event), sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
         with os.fdopen(fd, "ab") as stream:
+            fd = -1
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
     except Exception:
-        try:
-            os.close(fd)
-        except OSError:
-            pass
+        if fd >= 0:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
         raise
 
 
