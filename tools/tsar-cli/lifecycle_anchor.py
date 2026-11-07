@@ -20,7 +20,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from lifecycle_evidence import LifecycleEvidenceError, _read_regular_file, verify_audit
+from lifecycle_evidence import LifecycleEvidenceError, _open_project_file, _read_regular_file, verify_audit
 
 
 class LifecycleAnchorError(RuntimeError):
@@ -47,6 +47,41 @@ def _run_id(record: dict, repository: str) -> str:
     if not all(isinstance(value, str) and value for value in stable.values()):
         raise LifecycleAnchorError("audit is missing stable run identity fields")
     return _sha256(_canonical(stable))
+
+
+def _collect_evidence_files(record: dict, root: Path) -> tuple[dict[str, str], int]:
+    entries = record.get("evidence", [])
+    if not isinstance(entries, list):
+        raise LifecycleAnchorError("audit evidence collection is invalid")
+    collected, total = {}, 0
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise LifecycleAnchorError("audit evidence entry is invalid")
+        relative = entry.get("path")
+        if not isinstance(relative, str) or not relative:
+            raise LifecycleAnchorError("audit evidence path is invalid")
+        parts = Path(relative).parts
+        fd = _open_project_file(root, parts)
+        try:
+            chunks = []
+            while True:
+                chunk = os.read(fd, 1024 * 1024)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            data = b"".join(chunks)
+        finally:
+            os.close(fd)
+        if (not data or len(data) != entry.get("size_bytes")
+                or _sha256(data) != entry.get("sha256")):
+            raise LifecycleAnchorError("evidence changed after local lifecycle verification")
+        encoded = base64.b64encode(data).decode("ascii")
+        previous = collected.get(relative)
+        if previous is not None and previous != encoded:
+            raise LifecycleAnchorError("conflicting duplicate evidence paths")
+        collected[relative] = encoded
+        total += len(data)
+    return collected, total
 
 
 def _load_audit(audit_file: Path, repo_root: Path) -> tuple[dict, bytes]:
@@ -244,6 +279,9 @@ def anchor_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
         raise LifecycleAnchorError("audit snapshot exceeds the external service 4 MiB limit")
     run_id = _run_id(record, repository)
     record_digest = _sha256(raw_audit)
+    evidence_files, evidence_bytes = _collect_evidence_files(record, root)
+    if len(raw_audit) + evidence_bytes > 5 * 1024 * 1024:
+        raise LifecycleAnchorError("audit snapshot and evidence exceed the external service 5 MiB total limit")
     service_id, public_key = _load_service_trust(Path(service_trust_file), root)
     previous = _verified_latest(
         endpoint, token=token, timeout=timeout, service_id=service_id,
@@ -260,6 +298,7 @@ def anchor_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
             "run_id": run_id,
             "record_sha256": record_digest,
             "audit_snapshot_b64": base64.b64encode(raw_audit).decode("ascii"),
+            "evidence_files_b64": evidence_files,
             "integrity_status": audit_result.get("integrity_status"),
             "lifecycle_status": audit_result.get("lifecycle_status"),
             "gate_states": record.get("gates"),
