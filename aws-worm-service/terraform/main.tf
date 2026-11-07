@@ -68,18 +68,44 @@ resource "aws_s3_bucket_policy" "anchors" {
   bucket = aws_s3_bucket.anchors.id
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Sid       = "DenyInsecureTransport"
-      Effect    = "Deny"
-      Principal = "*"
-      Action    = "s3:*"
-      Resource  = [aws_s3_bucket.anchors.arn, "${aws_s3_bucket.anchors.arn}/*"]
-      Condition = {
-        Bool = {
-          "aws:SecureTransport" = "false"
+    Statement = [
+      {
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource  = [aws_s3_bucket.anchors.arn, "${aws_s3_bucket.anchors.arn}/*"]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      },
+      {
+        Sid       = "DenyNonComplianceObjectWrites"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.anchors.arn}/*"
+        Condition = {
+          StringNotEquals = {
+            "s3:object-lock-mode" = "COMPLIANCE"
+          }
+        }
+      },
+      {
+        Sid       = "DenyShortRetention"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.anchors.arn}/*"
+        Condition = {
+          NumericLessThan = {
+            "s3:object-lock-remaining-retention-days" = var.retention_days
+          }
         }
       }
-    }]
+    ]
   })
 }
 
