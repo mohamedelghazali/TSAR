@@ -9,7 +9,9 @@
 | `tsar lint` | Validate TSAR rules |
 | `tsar version` | Compare local/remote manifest version |
 | `tsar drift` | Detect drift between local and remote manifest (legacy version/file-set comparison) |
-| `tsar agent-gate [--domain NAME] -- COMMAND [ARGS...]` | Fail-closed preflight gate before launching a controlled agent command; exports pinned provenance via environment variables |\n| `tsar verify-upstream [--domain NAME]` | Pin upstream to one commit, validate manifest and all active paths, and fetch core plus selected domain rules (fail-closed) |
+| `tsar agent-gate [--domain NAME] -- COMMAND [ARGS...]` | Fail-closed preflight gate before launching a controlled agent command; exports pinned provenance via environment variables |
+| `tool_boundary.ToolBoundary` | Python dispatch API for registered tools; enforces action/resource/scope checks, action-bound approvals, and audit events before dispatch |
+| `tsar verify-upstream [--domain NAME]` | Pin upstream to one commit, validate manifest and all active paths, and fetch core plus selected domain rules (fail-closed) |
 | `tsar threat-model <file>` | STRIDE threat model |
 | `tsar lifecycle-plan <task> [--domain NAME] [--impact auto\|standard\|high]` | Create a deterministic lifecycle plan; does not execute or approve work |
 | `tsar lifecycle-start <task> --audit-file PATH [--domain NAME]` | Start a lifecycle run after upstream preflight |
@@ -116,3 +118,10 @@ tsar lifecycle-anchor-verify --audit-file .tsar/runs/run.json --trusted-reviewer
 - Protect transport with TLS, authenticate clients, rotate credentials, monitor retention-policy drift, and retain service signing keys in a separate KMS/HSM or equivalent trust boundary.
 
 The anchor client refuses incomplete or invalid evidence integrity, rejects redirects, refuses non-HTTPS endpoints, verifies the service signature and retention claim, and detects stale/missing latest snapshots. The local receipt is a convenience copy, not the authoritative archive. No external service is provisioned by TSAR itself; anchoring is operational only after an independently administered service implementing this contract is deployed and configured. A compromised service signing key or dishonest service administrator remains a trust-boundary risk.
+
+
+## Tool boundary integration (E3 building block)
+
+Import `ToolBoundary`, `ToolSpec`, `ActionRequest`, and `AuthorizationContext` from `tool_boundary`. Register tools in trusted host code and route every actual tool call through `ToolBoundary.dispatch`. The host must supply an authenticated principal, least-privilege scopes, a verifier for single-action approvals, and a durable audit sink. Unknown tools and out-of-scope actions fail closed. Credential access, deployment, irreversible actions, and explicitly approval-gated tools require a verified approval bound to the exact action digest. See `docs/tool-boundary-adapter.md` for the trust contract and limitations.
+
+This API does not automatically intercept provider tools, sandbox child processes, or prevent bypass calls. Claim E3 only for host dispatch paths demonstrably routed through the boundary.
