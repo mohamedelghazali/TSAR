@@ -57,6 +57,14 @@ def _domains_from_env() -> tuple[str, ...]:
     return domains
 
 
+def _principal_from_host() -> str:
+    configured = os.environ.get("TSAR_CLAUDE_PRINCIPAL")
+    if configured:
+        return configured
+    if hasattr(os, "getuid"):
+        return f"uid:{os.getuid()}"
+    return f"local-user:{getpass.getuser()}"
+
 def _scopes_from_env() -> frozenset[str]:
     raw = os.environ.get("TSAR_CLAUDE_SCOPES", "repo:read")
     return frozenset(part.strip() for part in raw.split(",") if part.strip())
@@ -443,8 +451,16 @@ def handle_event(
                         "permissionDecisionReason": "Only unread pinned TSAR policy files may be read before policy loading is complete.",
                     }
                 }
+            if "offset" in tool_input or "limit" in tool_input:
+                return {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": "Pinned TSAR policy files must be read in full; partial Read requests are not accepted.",
+                    }
+                }
 
-        principal = os.environ.get("TSAR_CLAUDE_PRINCIPAL") or getpass.getuser()
+        principal = _principal_from_host()
         request, spec = _request_for_tool(repo_root, payload, principal, state)
         scopes = _scopes_from_env()
 
