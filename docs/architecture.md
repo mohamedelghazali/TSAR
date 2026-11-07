@@ -41,7 +41,11 @@ Agent instructions are a guidance layer. They cannot force a provider or model t
 3. CI workflows run tests, scanners, policy checks, and infrastructure schema/static validation.
 4. Required checks can block pull-request merges when configured in GitHub.
 
-### Runtime
+### Agent runtime enforcement boundary
+
+The [Mandatory Agent Adoption and Enforcement Contract](mandatory-agent-enforcement.md) defines the adapter lifecycle from immutable policy bootstrap through tool-boundary checks, output verification, and evidence. A prompt or skill alone is not a runtime gate. Only claim enforcement for adapter and repository paths that are actually invoked and covered by conformance tests.
+
+## Runtime
 
 TSAR is not itself a runtime monitoring daemon, WAF, EDR, or SIEM. Runtime controls described by individual rules must be implemented in the target application or infrastructure and monitored by the team's chosen runtime security products.
 
