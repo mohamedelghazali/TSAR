@@ -117,6 +117,8 @@ def _safe_changed_files(root: Path, supplied: Iterable[str | Path]) -> list[Path
     seen: set[Path] = set()
     for item in supplied:
         raw = Path(item)
+        if any(part in {"", ".", ".."} for part in raw.parts):
+            raise ReferenceHostError("Changed-file paths must not contain traversal components")
         candidate = raw if raw.is_absolute() else root / raw
         try:
             lexical_parts = candidate.absolute().relative_to(root).parts
@@ -208,9 +210,11 @@ class ReferenceHost:
         expected_hashes = provenance.get("loaded_policy_sha256")
         domains = provenance.get("selected_domains")
         if (
-            not isinstance(commit, str) or len(commit) != 40
+            not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit)
             or not isinstance(version, str) or not isinstance(expected_hashes, dict)
-            or not isinstance(domains, list) or "core" not in domains
+            or not isinstance(domains, list) or not domains
+            or any(not isinstance(domain, str) for domain in domains)
+            or len(domains) != len(set(domains)) or "core" not in domains
         ):
             raise ReferenceHostError("Lifecycle preflight provenance is incomplete")
         manifest_raw = self.policy_fetcher(f"{RAW_BASE}/{commit}/manifest.yaml")
@@ -229,12 +233,15 @@ class ReferenceHost:
             or manifest.get("repository") != f"https://github.com/{REPOSITORY}"
             or manifest.get("version") != version
             or lifecycle.get("fail_closed") is not True
+            or lifecycle.get("fetch_before_task") is not True
+            or lifecycle.get("check_url") != f"{RAW_BASE}/main/manifest.yaml"
             or enforcement.get("default_mode") != "strict"
             or enforcement.get("allow_advisory_fallback") is not False
         ):
             raise ReferenceHostError("Pinned manifest identity or strict-mode settings are invalid")
         active = manifest.get("active_files")
         if (not isinstance(active, dict) or not isinstance(active.get("core"), list)
+                or any(not isinstance(path, str) for path in active["core"])
                 or set(active["core"]) != REQUIRED_CORE):
             raise ReferenceHostError("Pinned manifest does not contain the exact four-file core policy set")
         if any(not isinstance(domain, str) or domain not in active for domain in domains):
@@ -245,6 +252,8 @@ class ReferenceHost:
             domain_paths = active.get(domain)
             if not isinstance(domain_paths, list) or not domain_paths:
                 raise ReferenceHostError(f"Selected domain has no active policy files: {domain}")
+            if any(not isinstance(path, str) for path in domain_paths):
+                raise ReferenceHostError(f"Selected domain contains an invalid policy path: {domain}")
             paths.extend(domain_paths)
         if len(paths) != len(set(paths)) or set(paths) != set(expected_hashes):
             raise ReferenceHostError("Preflight policy hash inventory does not match selected manifest domains")
@@ -409,7 +418,12 @@ class ReferenceHost:
             dispatch_tool=dispatch_tool,
         )
         try:
-            agent(context)
+            agent_result = agent(context)
+            if inspect.isawaitable(agent_result):
+                close = getattr(agent_result, "close", None)
+                if callable(close):
+                    close()
+                raise ReferenceHostError("Async agent callbacks are not supported by this synchronous adapter")
         except Exception as exc:
             raise ReferenceHostError(
                 f"Agent execution failed; lifecycle remains incomplete: {type(exc).__name__}; "
