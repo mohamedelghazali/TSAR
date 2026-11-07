@@ -47,6 +47,8 @@ def test_github_aws_deployment_uses_oidc_and_explicit_retention_acknowledgement(
     assert "YES_I_UNDERSTAND_COMPLIANCE_RETENTION_IS_IRREVERSIBLE" in workflow
     assert "aws secretsmanager get-secret-value" in workflow
     assert "live_smoke_test.py" in workflow
+    assert "export_service_trust.py" in workflow
+    assert "actions/upload-artifact@" in workflow
     assert 'backend "s3" {}' in terraform
     assert "terraform destroy" not in workflow
 
