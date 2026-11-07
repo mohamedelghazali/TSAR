@@ -291,13 +291,15 @@ def cmd_init(args) -> int:
         print(f"Target directory does not exist: {target}", file=sys.stderr)
         return 2
 
+    # Every supported CLI target receives the same canonical policy text.
+    # Product-specific differences are limited to the destination and native adapters.
     prompt_map = {
-        "claude": ("claude.md", "CLAUDE.md"),
-        "claude-code": ("claude-code.md", "CLAUDE.md"),
-        "cursor": ("cursor.md", ".cursorrules"),
-        "copilot": ("github-copilot.md", ".github/copilot-instructions.md"),
-        "windsurf": ("windsurf.md", ".windsurfrules"),
-        "windsurf-rc": ("windsurf.md", ".windsurfrules"),
+        "claude": ("universal.md", "CLAUDE.md"),
+        "claude-code": ("universal.md", "CLAUDE.md"),
+        "cursor": ("universal.md", ".cursorrules"),
+        "copilot": ("universal.md", ".github/copilot-instructions.md"),
+        "windsurf": ("universal.md", ".windsurfrules"),
+        "windsurf-rc": ("universal.md", ".windsurfrules"),
         "generic": ("universal.md", "AGENTS.md"),
     }
     if args.agent not in prompt_map:

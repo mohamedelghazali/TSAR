@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0.0",
+  "policy_source": "prompts/universal.md",
+  "profiles": [
+    {
+      "name": "Claude (chat)",
+      "key": "claude",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "system_instructions",
+      "target": "Provider system-instructions field",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Claude Code",
+      "key": "claude-code",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "project_instructions",
+      "target": "CLAUDE.md / project instructions",
+      "native_adapter": "integrations/claude-code/settings.json",
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "GPT",
+      "key": "gpt",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "system_instructions",
+      "target": "Provider system-instructions field",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "DeepSeek-Coder",
+      "key": "deepseek-coder",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "system_instructions",
+      "target": "Provider system-instructions field",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Qwen-Coder",
+      "key": "qwen-coder",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "system_instructions",
+      "target": "Provider system-instructions field",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Gemini",
+      "key": "gemini",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "system_instructions",
+      "target": "Provider system-instructions field",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Llama",
+      "key": "llama",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "system_instructions",
+      "target": "Selected local/hosted runtime instruction mechanism",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Cursor",
+      "key": "cursor",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "project_instructions",
+      "target": "Cursor workspace/project rules (version-dependent)",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "GitHub Copilot",
+      "key": "github-copilot",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "repository_instructions",
+      "target": ".github/copilot-instructions.md",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Manus",
+      "key": "manus",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "agent_instructions",
+      "target": "Manus agent instructions/context",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Windsurf",
+      "key": "windsurf",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "project_instructions",
+      "target": "Windsurf workspace/project rules",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "SuperNinja",
+      "key": "superninja",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "agent_instructions",
+      "target": "SuperNinja agent instructions/context",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Replit Agent",
+      "key": "replit-agent",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "project_instructions",
+      "target": "Replit project instructions/context",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Devin",
+      "key": "devin",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "agent_instructions",
+      "target": "Devin agent instructions/context",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    },
+    {
+      "name": "Kimi",
+      "key": "kimi",
+      "canonical_instructions": "prompts/universal.md",
+      "delivery": "system_instructions",
+      "target": "Provider system-instructions field",
+      "native_adapter": null,
+      "assurance_baseline": "E0/E1 unless stronger host-side controls are independently tested"
+    }
+  ]
+}

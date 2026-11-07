@@ -74,10 +74,16 @@ def test_no_hardcoded_secrets():
 def test_all_prompts_have_manifest_reference():
     for f in (ROOT / "prompts").glob("*.md"):
         text = f.read_text()
+        if f.name != "universal.md" and "Legacy Compatibility Pointer" in text:
+            assert "universal.md" in text, f"{f.name} does not point to canonical instructions"
+            continue
         assert "manifest" in text.lower(), f"{f.name} does not reference manifest"
 
 def test_all_prompts_have_core_reference():
     for f in (ROOT / "prompts").glob("*.md"):
         text = f.read_text()
+        if f.name != "universal.md" and "Legacy Compatibility Pointer" in text:
+            assert "universal.md" in text, f"{f.name} does not point to canonical instructions"
+            continue
         assert "CORE_DIRECTIVE" in text or "core" in text.lower(), \
             f"{f.name} does not reference core directive"

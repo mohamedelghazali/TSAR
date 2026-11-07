@@ -15,7 +15,7 @@ def test_init_defaults_to_universal_instructions(tmp_path):
     (tmp_path / ".git" / "hooks").mkdir()
     r = run(["init", str(tmp_path)], cwd=tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert (tmp_path / "AGENTS.md").exists()
+    assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == (ROOT / "prompts" / "universal.md").read_text(encoding="utf-8")
     cfg = (tmp_path / ".tsar" / "config.json").read_text(encoding="utf-8")
     assert '"agent": "generic"' in cfg
 
@@ -25,7 +25,7 @@ def test_init_claude(tmp_path):
     (tmp_path / ".git" / "hooks").mkdir()
     r = run(["init", ".", "--agent", "claude"], cwd=tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert (tmp_path / "CLAUDE.md").exists()
+    assert (tmp_path / "CLAUDE.md").read_text(encoding="utf-8") == (ROOT / "prompts" / "universal.md").read_text(encoding="utf-8")
     assert (tmp_path / ".tsar" / "manifest.yaml").exists()
     assert (tmp_path / ".tsar" / "rules" / "crypto" / "algorithms.md").exists()
     assert (tmp_path / ".tsar" / "system" / "CORE_DIRECTIVE.md").exists()
@@ -36,14 +36,14 @@ def test_init_cursor(tmp_path):
     (tmp_path / ".git" / "hooks").mkdir()
     r = run(["init", ".", "--agent", "cursor"], cwd=tmp_path)
     assert r.returncode == 0
-    assert (tmp_path / ".cursorrules").exists()
+    assert (tmp_path / ".cursorrules").read_text(encoding="utf-8") == (ROOT / "prompts" / "universal.md").read_text(encoding="utf-8")
 
 def test_init_copilot(tmp_path):
     (tmp_path / ".git").mkdir()
     (tmp_path / ".git" / "hooks").mkdir()
     r = run(["init", ".", "--agent", "copilot"], cwd=tmp_path)
     assert r.returncode == 0
-    assert (tmp_path / ".github" / "copilot-instructions.md").exists()
+    assert (tmp_path / ".github" / "copilot-instructions.md").read_text(encoding="utf-8") == (ROOT / "prompts" / "universal.md").read_text(encoding="utf-8")
 
 def test_init_unknown_agent(tmp_path):
     r = run(["init", ".", "--agent", "notreal"], cwd=tmp_path)

@@ -1,119 +1,90 @@
-"""Repository-level consistency checks for the 15 documented agent prompt integrations.
-
-These tests deliberately do not claim that external providers were launched or obeyed TSAR.
-"""
+"""Repository consistency checks for the shared 15-agent compatibility architecture."""
 from __future__ import annotations
 
-import re
+import json
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MATRIX = ROOT / "docs" / "agent-compatibility-matrix.md"
+REGISTRY = ROOT / "integrations" / "agent-profiles.json"
+CANONICAL = ROOT / "prompts" / "universal.md"
 
-EXPECTED_PROMPTS = {
-    "Claude (chat)": "prompts/claude.md",
-    "Claude Code": "prompts/claude-code.md",
-    "GPT": "prompts/gpt.md",
-    "DeepSeek-Coder": "prompts/deepseek-coder.md",
-    "Qwen-Coder": "prompts/qwen-coder.md",
-    "Gemini": "prompts/gemini.md",
-    "Llama": "prompts/llama.md",
-    "Cursor": "prompts/cursor.md",
-    "GitHub Copilot": "prompts/github-copilot.md",
-    "Manus": "prompts/manus.md",
-    "Windsurf": "prompts/windsurf.md",
-    "SuperNinja": "prompts/superninja.md",
-    "Replit Agent": "prompts/replit-agent.md",
-    "Devin": "prompts/devin.md",
-    "Kimi": "prompts/kimi.md",
+EXPECTED = {
+    "Claude (chat)": "claude",
+    "Claude Code": "claude-code",
+    "GPT": "gpt",
+    "DeepSeek-Coder": "deepseek-coder",
+    "Qwen-Coder": "qwen-coder",
+    "Gemini": "gemini",
+    "Llama": "llama",
+    "Cursor": "cursor",
+    "GitHub Copilot": "github-copilot",
+    "Manus": "manus",
+    "Windsurf": "windsurf",
+    "SuperNinja": "superninja",
+    "Replit Agent": "replit-agent",
+    "Devin": "devin",
+    "Kimi": "kimi",
 }
 
 
-class AgentCompatibilityInventoryTests(unittest.TestCase):
+class AgentCompatibilityArchitectureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.matrix = MATRIX.read_text(encoding="utf-8")
+        cls.registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+        cls.profiles = cls.registry["profiles"]
 
-    def test_exactly_fifteen_unique_agents_are_documented(self) -> None:
-        rows = re.findall(r"^\| ([^|]+) \| (prompts/[^|]+) \|", self.matrix, re.MULTILINE)
-        self.assertEqual(len(rows), 15, "compatibility matrix must contain exactly 15 agent rows")
-        names = [name.strip() for name, _ in rows]
-        self.assertEqual(len(set(names)), 15, "agent names in the matrix must be unique")
-        self.assertEqual(dict((name.strip(), path.strip()) for name, path in rows), EXPECTED_PROMPTS)
+    def test_exactly_fifteen_unique_profiles_exist(self) -> None:
+        self.assertEqual(self.registry["schema_version"], "1.0.0")
+        self.assertEqual(self.registry["policy_source"], "prompts/universal.md")
+        self.assertEqual(len(self.profiles), 15)
+        names = [profile["name"] for profile in self.profiles]
+        keys = [profile["key"] for profile in self.profiles]
+        self.assertEqual(set(names), set(EXPECTED))
+        self.assertEqual(len(set(keys)), 15)
+        self.assertEqual({p["name"]: p["key"] for p in self.profiles}, EXPECTED)
 
-    def test_every_matrix_prompt_exists_and_is_nonempty(self) -> None:
-        for agent, relative_path in EXPECTED_PROMPTS.items():
-            with self.subTest(agent=agent):
-                prompt = ROOT / relative_path
-                self.assertTrue(prompt.is_file(), f"missing prompt for {agent}: {relative_path}")
-                self.assertGreater(prompt.stat().st_size, 0, f"empty prompt for {agent}: {relative_path}")
+    def test_all_profiles_share_the_single_canonical_instruction_source(self) -> None:
+        self.assertTrue(CANONICAL.is_file())
+        canonical = CANONICAL.read_text(encoding="utf-8")
+        self.assertIn("single authoritative TSAR instruction set", canonical)
+        for profile in self.profiles:
+            with self.subTest(agent=profile["name"]):
+                self.assertEqual(profile["canonical_instructions"], "prompts/universal.md")
+                self.assertIn(profile["delivery"], {
+                    "system_instructions", "project_instructions",
+                    "repository_instructions", "agent_instructions",
+                })
+                self.assertTrue(profile["target"].strip())
 
-    def test_only_claude_code_is_documented_as_having_the_native_hook_profile(self) -> None:
-        rows = re.findall(r"^\| ([^|]+) \| (prompts/[^|]+) \|[^\n]*$", self.matrix, re.MULTILINE)
-        hook_agents = [
-            name.strip()
-            for name, _ in rows
-            if "optional native TSAR hooks" in next(
-                line for line in self.matrix.splitlines()
-                if line.startswith(f"| {name.strip()} |")
-            )
-        ]
-        self.assertEqual(hook_agents, ["Claude Code"])
-        self.assertIn("not a shared hook implementation for the other 14 entries", self.matrix)
+    def test_legacy_prompt_paths_are_small_pointers_not_policy_copies(self) -> None:
+        for profile in self.profiles:
+            path = ROOT / "prompts" / (profile["key"] + ".md")
+            with self.subTest(agent=profile["name"]):
+                self.assertTrue(path.is_file())
+                self.assertLess(path.stat().st_size, 1024)
+                content = path.read_text(encoding="utf-8")
+                self.assertIn("Legacy Compatibility Pointer", content)
+                self.assertIn("universal.md", content)
+                self.assertIn("independent TSAR policy", content)
 
-    def test_matrix_explicitly_separates_inventory_from_live_provider_proof(self) -> None:
-        required_statements = (
-            "repository consistency only",
-            "does not call any provider",
-            "Live provider conformance",
-            "authenticated, supported environment",
-            "not live authenticated-provider proof",
-        )
-        for statement in required_statements:
-            with self.subTest(statement=statement):
-                self.assertIn(statement, self.matrix)
+    def test_only_claude_code_declares_the_optional_native_hook_adapter(self) -> None:
+        hooked = [p["name"] for p in self.profiles if p["native_adapter"]]
+        self.assertEqual(hooked, ["Claude Code"])
+        self.assertTrue((ROOT / "integrations" / "claude-code" / "settings.json").is_file())
+
+    def test_matrix_matches_registry_without_claiming_live_provider_proof(self) -> None:
+        rows = [line for line in self.matrix.splitlines() if line.startswith("| ") and "prompts/universal.md" in line]
+        parsed = [[cell.strip() for cell in row.strip("|").split("|")] for row in rows]
+        self.assertEqual(len(parsed), 15)
+        self.assertEqual({row[0]: row[2] for row in parsed}, EXPECTED)
+        self.assertIn("does not call providers", self.matrix)
+        self.assertIn("Live provider conformance", self.matrix)
+        self.assertIn("or establish live runtime conformance", self.matrix)
+        self.assertIn("Instruction Source", self.matrix)
 
 
 if __name__ == "__main__":
     unittest.main()
-
-
-"""Repository-level checks for the agent runtime conformance plan."""
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "docs" / "agent-runtime-conformance-plan.md"
-
-
-def test_runtime_conformance_plan_covers_all_fifteen_inventory_entries():
-    text = PLAN.read_text(encoding="utf-8")
-    names = (
-        "Claude (chat)", "Claude Code", "GPT", "DeepSeek-Coder", "Qwen-Coder",
-        "Gemini", "Llama", "Cursor", "GitHub Copilot", "Manus", "Windsurf",
-        "SuperNinja", "Replit Agent", "Devin", "Kimi",
-    )
-    for name in names:
-        assert f"| {name} |" in text
-
-
-def test_runtime_conformance_plan_separates_live_tests_from_ci():
-    text = PLAN.read_text(encoding="utf-8")
-    for required in (
-        "Standard conformance scenarios",
-        "Evidence record",
-        "CI versus live provider testing",
-        "NOT_RUN",
-        "NOT_APPLICABLE",
-        "authenticated",
-        "immutable commit SHA",
-        "three times",
-        "Do not make all 15 live tests mandatory",
-    ):
-        assert required in text
-
-
-def test_plan_does_not_claim_all_providers_have_runtime_enforcement():
-    text = PLAN.read_text(encoding="utf-8")
-    assert "No other provider should be marked live-tested" in text
-    assert "A chat-only interface with no supported interception mechanism may remain E0/E1" in text
