@@ -91,7 +91,7 @@ def _latest(run_id):
 
 def _put_snapshot(run_id, anchor_id, request, receipt, retain_until):
     key = "runs/" + run_id + "/" + anchor_id + ".json"
-    body = canonical({"request": request, "receipt": receipt})
+    body = canonical({"request": request, "audit_snapshot_b64": request["audit_snapshot_b64"], "receipt": receipt})
     result = s3.put_object(
         Bucket=BUCKET,
         Key=key,
@@ -132,6 +132,36 @@ def _append(request):
         raise ValueError("repository is not authorized")
     if not isinstance(request.get("gate_states"), dict):
         raise ValueError("gate_states must be an object")
+    encoded_snapshot = request.get("audit_snapshot_b64")
+    if not isinstance(encoded_snapshot, str):
+        raise ValueError("audit_snapshot_b64 is required")
+    try:
+        audit_bytes = base64.b64decode(encoded_snapshot, validate=True)
+        if not audit_bytes or len(audit_bytes) > 4 * 1024 * 1024:
+            raise ValueError("audit snapshot must be between 1 byte and 4 MiB")
+        audit_record = json.loads(audit_bytes)
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("audit snapshot is not valid bounded Base64 JSON") from exc
+    if digest(audit_bytes) != record_sha:
+        raise ValueError("audit snapshot digest does not match record_sha256")
+    if not isinstance(audit_record, dict) or audit_record.get("schema") != "tsar/lifecycle-run/v1":
+        raise ValueError("audit snapshot schema is invalid")
+    task = audit_record.get("task")
+    provenance = audit_record.get("provenance")
+    stable_identity = {
+        "repository": repository,
+        "created_at": audit_record.get("created_at"),
+        "task": task.get("task") if isinstance(task, dict) else None,
+        "upstream_commit_sha": provenance.get("upstream_commit_sha") if isinstance(provenance, dict) else None,
+    }
+    if not all(isinstance(value, str) and value for value in stable_identity.values()):
+        raise ValueError("audit snapshot is missing stable run identity fields")
+    if digest(canonical(stable_identity)) != run_id:
+        raise ValueError("audit snapshot run identity does not match run_id")
+    if request.get("upstream_commit_sha") != stable_identity["upstream_commit_sha"]:
+        raise ValueError("upstream commit does not match audit snapshot")
+    if request.get("gate_states") != audit_record.get("gates"):
+        raise ValueError("gate states do not match audit snapshot")
 
     existing_idem = ddb.get_item(
         TableName=TABLE,
