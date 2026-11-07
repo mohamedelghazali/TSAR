@@ -1,0 +1,166 @@
+"""Fail-closed tool/action dispatch boundary for controlled agent integrations.
+
+The host integration owns the tool registry, principal/scopes, approval verifier,
+audit sink, and dispatcher. Model-provided labels or arguments never grant access.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable, Mapping
+
+
+class ActionClass(str, Enum):
+    READ_ONLY = "read_only"
+    REPOSITORY_WRITE = "repository_write"
+    EXTERNAL_NETWORK = "external_network"
+    CREDENTIAL_ACCESS = "credential_access"
+    DEPLOYMENT = "deployment"
+    IRREVERSIBLE = "irreversible"
+
+
+class Decision(str, Enum):
+    ALLOW = "ALLOW"
+    DENY = "DENY"
+
+
+class ToolBoundaryError(RuntimeError):
+    """A tool action was denied or could not be safely dispatched."""
+
+
+class AuditWriteError(ToolBoundaryError):
+    """The audit sink failed; callers must not assume the action was not executed."""
+
+
+@dataclass(frozen=True)
+class ToolSpec:
+    """Trusted host-side registration; never construct this from model output."""
+    name: str
+    action_class: ActionClass
+    operations: frozenset[str]
+    resources: frozenset[str]
+    required_scope: str
+    requires_approval: bool = False
+
+
+@dataclass(frozen=True)
+class ActionRequest:
+    tool: str
+    operation: str
+    resource: str
+    actor: str
+    arguments: Mapping[str, Any]
+    approval: Any = None
+
+
+@dataclass(frozen=True)
+class AuthorizationContext:
+    principal: str
+    scopes: frozenset[str]
+
+
+SENSITIVE_CLASSES = frozenset({
+    ActionClass.CREDENTIAL_ACCESS,
+    ActionClass.DEPLOYMENT,
+    ActionClass.IRREVERSIBLE,
+})
+
+
+def action_digest(request: ActionRequest) -> str:
+    """Hash the exact action identity and arguments; do not include approval data."""
+    try:
+        canonical = json.dumps(
+            {
+                "tool": request.tool,
+                "operation": request.operation,
+                "resource": request.resource,
+                "actor": request.actor,
+                "arguments": request.arguments,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ToolBoundaryError("Action arguments are not canonical JSON data") from exc
+    return hashlib.sha256(canonical).hexdigest()
+
+
+class ToolBoundary:
+    """Dispatch only registered, in-scope actions after policy and audit checks."""
+
+    def __init__(
+        self,
+        registry: Mapping[str, ToolSpec],
+        authorization: AuthorizationContext,
+        *,
+        approval_verifier: Callable[[Any, str, str], bool],
+        audit_sink: Callable[[Mapping[str, Any]], None],
+    ) -> None:
+        self._registry = dict(registry)
+        self._authorization = authorization
+        self._approval_verifier = approval_verifier
+        self._audit_sink = audit_sink
+
+    def _audit(self, event: Mapping[str, Any]) -> None:
+        try:
+            self._audit_sink(dict(event))
+        except Exception as exc:
+            raise AuditWriteError(
+                "Audit sink failed; dispatch is blocked or its outcome may be unknown"
+            ) from exc
+
+    def dispatch(
+        self,
+        request: ActionRequest,
+        dispatcher: Callable[[Mapping[str, Any]], Any],
+    ) -> Any:
+        if not isinstance(request, ActionRequest):
+            raise ToolBoundaryError("Invalid action request")
+        if request.actor != self._authorization.principal:
+            raise ToolBoundaryError("Action actor does not match authenticated principal")
+        if not isinstance(request.arguments, Mapping):
+            raise ToolBoundaryError("Action arguments must be a mapping")
+        spec = self._registry.get(request.tool)
+        digest = action_digest(request)
+
+        reason = None
+        if spec is None:
+            reason = "unregistered_tool"
+        elif request.operation not in spec.operations:
+            reason = "operation_not_registered"
+        elif request.resource not in spec.resources:
+            reason = "resource_out_of_scope"
+        elif spec.required_scope not in self._authorization.scopes:
+            reason = "missing_authorization_scope"
+        elif (
+            spec.requires_approval or spec.action_class in SENSITIVE_CLASSES
+        ) and not self._approval_verifier(
+            request.approval, digest, self._authorization.principal
+        ):
+            reason = "missing_or_invalid_action_bound_approval"
+
+        event = {
+            "schema": "tsar/tool-boundary-event/v1",
+            "decision": Decision.DENY.value if reason else Decision.ALLOW.value,
+            "tool": request.tool,
+            "operation": request.operation,
+            "resource": request.resource,
+            "actor": self._authorization.principal,
+            "action_sha256": digest,
+            "reason": reason,
+        }
+        self._audit(event)
+        if reason:
+            raise ToolBoundaryError(f"Tool action denied: {reason}")
+
+        try:
+            result = dispatcher(request.arguments)
+        except Exception as exc:
+            self._audit({**event, "outcome": "DISPATCH_ERROR", "error_type": type(exc).__name__})
+            raise
+        self._audit({**event, "outcome": "EXECUTED"})
+        return result
