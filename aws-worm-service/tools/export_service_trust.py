@@ -35,6 +35,9 @@ def main():
     destination = args.output.expanduser()
     if not destination.parent.is_dir():
         raise SystemExit("output parent directory must already exist and be protected")
+    if os.name == "posix" and destination.parent.stat().st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        raise SystemExit("output parent directory must not be group- or world-writable")
+    destination = destination.parent.resolve(strict=True) / destination.name
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(str(destination), flags, 0o600)
     try:
