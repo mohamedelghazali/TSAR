@@ -104,7 +104,10 @@ def _safe_relative_file(root: Path, supplied: str) -> tuple[Path, str, int]:
     parts = candidate.parts
     if not parts:
         raise LifecycleEvidenceError("file path must identify a regular file")
-    fd = _open_project_file(root, parts)
+    try:
+        fd = _open_project_file(root, parts)
+    except OSError as exc:
+        raise LifecycleEvidenceError(f"evidence path is missing or unsafe: {exc}") from exc
     digest, size = hashlib.sha256(), 0
     try:
         while True:
