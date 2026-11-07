@@ -120,6 +120,22 @@ def test_non_policy_tool_is_blocked_until_every_policy_file_was_read(tmp_path, m
     assert "Read every pinned TSAR policy file" in result["hookSpecificOutput"]["permissionDecisionReason"]
 
 
+def test_partial_policy_read_is_rejected(tmp_path, monkeypatch):
+    setup_env(monkeypatch, tmp_path)
+    handle_event(
+        event(tmp_path, "UserPromptSubmit"),
+        preflight=lambda root, domains: report(),
+        policy_fetcher=fetcher,
+    )
+    state_files = list((tmp_path / "private-audit").rglob("*.state.json"))
+    state = json.loads(state_files[0].read_text(encoding="utf-8"))
+    policy_path = next(iter(state["required_policy_files"]))
+    result = handle_event(
+        event(tmp_path, tool_name="Read", tool_use_id="partial-read",
+              tool_input={"file_path": policy_path, "offset": 1, "limit": 1}),
+    )
+    assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert "read in full" in result["hookSpecificOutput"]["permissionDecisionReason"]
 def test_read_tool_is_authorized_and_audited_after_policy_read(tmp_path, monkeypatch):
     prime_session(tmp_path, monkeypatch)
     target = tmp_path / "src" / "app.py"
