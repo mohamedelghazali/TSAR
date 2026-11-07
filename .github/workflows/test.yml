@@ -45,7 +45,8 @@ jobs:
               entry_point_files = [name for name in names if name.endswith(".dist-info/entry_points.txt")]
               assert len(entry_point_files) == 1, f"expected one entry_points.txt, found {entry_point_files}"
               entry_points = wheel.read(entry_point_files[0]).decode()
-              assert "tsar = tsar:main" in entry_points\n              assert "tsar-claude-hook = claude_code_hook:main" in entry_points
+              assert "tsar = tsar:main" in entry_points
+              assert "tsar-claude-hook = claude_code_hook:main" in entry_points
           print("CLI wheel contains lifecycle, reference-host, Claude Code hook modules, and both CLI entry points.")
           PY
 
