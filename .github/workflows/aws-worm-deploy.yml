@@ -1,0 +1,194 @@
+name: AWS WORM Deploy and Live Qualification
+on:
+  workflow_dispatch:
+    inputs:
+      aws_role_arn:
+        description: "AWS IAM role ARN trusted for this repository's GitHub OIDC subject"
+        required: true
+        type: string
+      aws_region:
+        description: "AWS region supporting the KMS Ed25519 key spec"
+        required: true
+        default: "us-east-1"
+        type: string
+      state_bucket:
+        description: "Globally unique Terraform state bucket (created if absent)"
+        required: true
+        type: string
+      anchor_bucket:
+        description: "Globally unique S3 Object Lock evidence bucket"
+        required: true
+        type: string
+      token_secret_arn:
+        description: "Pre-created Secrets Manager ARN; SecretString is the bearer token"
+        required: true
+        type: string
+      retention_days:
+        description: "Irreversible default S3 COMPLIANCE retention in days"
+        required: true
+        default: "365"
+        type: string
+      mode:
+        description: "Plan only, or provision AWS resources and run live tests"
+        required: true
+        default: "plan-only"
+        type: choice
+        options: [plan-only, apply]
+      compliance_retention_ack:
+        description: "Required acknowledgement before irreversible COMPLIANCE retention"
+        required: true
+        default: "NO"
+        type: choice
+        options: ["NO", "YES_I_UNDERSTAND_COMPLIANCE_RETENTION_IS_IRREVERSIBLE"]
+permissions:
+  contents: read
+concurrency:
+  group: tsar-aws-worm-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  deploy-and-qualify:
+    name: AWS WORM ${{ inputs.mode }} and live qualification
+    if: ${{ inputs.mode == 'plan-only' || inputs.compliance_retention_ack == 'YES_I_UNDERSTAND_COMPLIANCE_RETENTION_IS_IRREVERSIBLE' }}
+    runs-on: ubuntu-latest
+    environment: aws-production
+    permissions:
+      contents: read
+      id-token: write
+    timeout-minutes: 45
+    env:
+      AWS_REGION: ${{ inputs.aws_region }}
+      AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_aws_region: ${{ inputs.aws_region }}
+      TF_VAR_bucket_name: ${{ inputs.anchor_bucket }}
+      TF_VAR_token_secret_arn: ${{ inputs.token_secret_arn }}
+      TF_VAR_retention_days: ${{ inputs.retention_days }}
+      TF_VAR_allowed_repositories: '["mohamedelghazali/TSAR"]'
+    steps:
+      - name: Validate deployment inputs
+        shell: bash
+        env:
+          MODE: ${{ inputs.mode }}
+          ACK: ${{ inputs.compliance_retention_ack }}
+          STATE_BUCKET: ${{ inputs.state_bucket }}
+          ANCHOR_BUCKET: ${{ inputs.anchor_bucket }}
+          RETENTION_DAYS: ${{ inputs.retention_days }}
+          ROLE_ARN: ${{ inputs.aws_role_arn }}
+        run: |
+          set -euo pipefail
+          [[ "$ROLE_ARN" =~ ^arn:aws(-[a-z]+)?:iam::[0-9]{12}:role/.+ ]] || { echo "Invalid AWS role ARN"; exit 1; }
+          [[ "$STATE_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]] || { echo "Invalid state bucket name"; exit 1; }
+          [[ "$ANCHOR_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]] || { echo "Invalid anchor bucket name"; exit 1; }
+          [[ "$STATE_BUCKET" != "$ANCHOR_BUCKET" ]] || { echo "State and evidence buckets must differ"; exit 1; }
+          [[ "$RETENTION_DAYS" =~ ^[0-9]+$ ]] && (( RETENTION_DAYS >= 1 && RETENTION_DAYS <= 36500 )) || { echo "retention_days must be 1..36500"; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configure AWS credentials through GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ inputs.aws_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+          role-session-name: tsar-worm-github-actions
+      - name: Verify AWS account
+        shell: bash
+        env:
+          ROLE_ARN: ${{ inputs.aws_role_arn }}
+        run: |
+          set -euo pipefail
+          expected="$(cut -d: -f5 <<< "$ROLE_ARN")"
+          actual="$(aws sts get-caller-identity --query Account --output text)"
+          [[ "$actual" == "$expected" ]] || { echo "AWS account mismatch"; exit 1; }
+          aws sts get-caller-identity
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.11.4"
+          terraform_wrapper: false
+      - name: Bootstrap encrypted, versioned Terraform state bucket
+        if: ${{ inputs.mode == 'apply' }}
+        shell: bash
+        env:
+          STATE_BUCKET: ${{ inputs.state_bucket }}
+        run: |
+          set -euo pipefail
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          if ! aws s3api head-bucket --bucket "$STATE_BUCKET" --expected-bucket-owner "$account_id" >/dev/null 2>&1; then
+            if [[ "$AWS_REGION" == "us-east-1" ]]; then
+              aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$AWS_REGION"
+            else
+              aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$AWS_REGION" --create-bucket-configuration "LocationConstraint=$AWS_REGION"
+            fi
+          fi
+          aws s3api put-bucket-ownership-controls --bucket "$STATE_BUCKET" --ownership-controls 'Rules=[{ObjectOwnership=BucketOwnerEnforced}]'
+          aws s3api put-public-access-block --bucket "$STATE_BUCKET" --public-access-block-configuration 'BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'
+          aws s3api put-bucket-versioning --bucket "$STATE_BUCKET" --versioning-configuration Status=Enabled
+          aws s3api put-bucket-encryption --bucket "$STATE_BUCKET" --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"},"BucketKeyEnabled":true}]}'
+          cat > /tmp/state-policy.json <<EOF
+          {"Version":"2012-10-17","Statement":[{"Sid":"DenyInsecureTransport","Effect":"Deny","Principal":"*","Action":"s3:*","Resource":["arn:aws:s3:::$STATE_BUCKET","arn:aws:s3:::$STATE_BUCKET/*"],"Condition":{"Bool":{"aws:SecureTransport":"false"}}}]}
+          EOF
+          aws s3api put-bucket-policy --bucket "$STATE_BUCKET" --policy file:///tmp/state-policy.json
+          aws s3api get-bucket-versioning --bucket "$STATE_BUCKET"
+          aws s3api get-public-access-block --bucket "$STATE_BUCKET"
+      - name: Initialize Terraform with durable S3 state
+        if: ${{ inputs.mode == 'apply' }}
+        run: >-
+          terraform -chdir=aws-worm-service/terraform init -input=false
+          -backend-config="bucket=${{ inputs.state_bucket }}"
+          -backend-config="key=tsar/aws-worm/terraform.tfstate"
+          -backend-config="region=${{ inputs.aws_region }}"
+          -backend-config="encrypt=true"
+          -backend-config="use_lockfile=true"
+      - name: Initialize Terraform without backend (plan only)
+        if: ${{ inputs.mode == 'plan-only' }}
+        run: terraform -chdir=aws-worm-service/terraform init -backend=false -input=false
+      - name: Validate Terraform configuration
+        run: terraform -chdir=aws-worm-service/terraform validate
+      - name: Create and display Terraform plan
+        run: |
+          terraform -chdir=aws-worm-service/terraform plan -input=false -no-color -out=tfplan
+          terraform -chdir=aws-worm-service/terraform show -no-color tfplan
+      - name: Apply saved plan
+        if: ${{ inputs.mode == 'apply' }}
+        run: terraform -chdir=aws-worm-service/terraform apply -input=false -auto-approve tfplan
+      - name: Export deployment outputs
+        if: ${{ inputs.mode == 'apply' }}
+        id: outputs
+        shell: bash
+        run: |
+          echo "api_endpoint=$(terraform -chdir=aws-worm-service/terraform output -raw api_endpoint)" >> "$GITHUB_OUTPUT"
+          echo "signing_key_arn=$(terraform -chdir=aws-worm-service/terraform output -raw signing_key_arn)" >> "$GITHUB_OUTPUT"
+      - name: Install live-test dependencies
+        if: ${{ inputs.mode == 'apply' }}
+        run: python -m pip install --disable-pip-version-check 'boto3>=1.34,<2' 'cryptography>=42,<50'
+      - name: Retrieve bearer token and mask it
+        if: ${{ inputs.mode == 'apply' }}
+        shell: bash
+        env:
+          SECRET_ARN: ${{ inputs.token_secret_arn }}
+        run: |
+          set -euo pipefail
+          token="$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --query SecretString --output text)"
+          [[ -n "$token" && "$token" != "None" ]] || { echo "Empty Secrets Manager SecretString"; exit 1; }
+          echo "::add-mask::$token"
+          echo "TSAR_WORM_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Run authenticated end-to-end WORM smoke test
+        if: ${{ inputs.mode == 'apply' }}
+        env:
+          TSAR_WORM_ENDPOINT: ${{ steps.outputs.outputs.api_endpoint }}
+          TSAR_WORM_KMS_KEY_ARN: ${{ steps.outputs.outputs.signing_key_arn }}
+          TSAR_WORM_RETENTION_DAYS: ${{ inputs.retention_days }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: python aws-worm-service/tools/live_smoke_test.py
+      - name: Verify deployed S3 protections
+        if: ${{ inputs.mode == 'apply' }}
+        shell: bash
+        env:
+          ANCHOR_BUCKET: ${{ inputs.anchor_bucket }}
+        run: |
+          set -euo pipefail
+          aws s3api get-bucket-versioning --bucket "$ANCHOR_BUCKET" | grep -q '"Status": "Enabled"'
+          aws s3api get-object-lock-configuration --bucket "$ANCHOR_BUCKET" | grep -q '"Mode": "COMPLIANCE"'
+          aws s3api get-public-access-block --bucket "$ANCHOR_BUCKET" >/dev/null
+          echo "S3 versioning, Object Lock COMPLIANCE, and public-access block verified."
