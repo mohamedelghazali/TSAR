@@ -42,4 +42,8 @@ After integration, ask the agent to generate a query function:
 - Incorrect: string concatenation.
 
 This is a smoke test for instruction loading, not proof of complete security coverage. Also run the project scanner and CI checks.
-\n\n## Native hook integrations\n\nClaude Code has an optional TSAR hook integration that can block prompts and tool calls through native lifecycle hooks. This is stronger than project instructions but remains limited to the exact hook events and tools configured in the strict profile. It is not proof of provider-wide or operating-system-level enforcement. See [Claude Code enforcement integration](claude-code-enforcement.md).\n
+
+
+## Native hook integrations
+
+Claude Code has an optional TSAR hook integration that can block prompts and tool calls through native lifecycle hooks. This is stronger than project instructions but remains limited to the exact hook events and tools configured in the strict profile. It is not proof of provider-wide or operating-system-level enforcement. See [Claude Code enforcement integration](claude-code-enforcement.md).
