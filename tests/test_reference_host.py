@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -42,7 +43,7 @@ MANIFEST = (
 ).encode()
 
 
-def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamper_policy=False):
+def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamper_policy=False, run_real_checks=False):
     root = tmp_path / "project"
     (root / "tools" / "tsar-cli").mkdir(parents=True)
     (root / "manifest.yaml").write_bytes(MANIFEST)
@@ -66,6 +67,8 @@ def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamp
                 "errors": [] if preflight_status == "PASS" else ["test preflight failure"],
             }), encoding="utf-8")
             return SimpleNamespace(returncode=0 if preflight_status == "PASS" else 2, stdout="", stderr="")
+        if run_real_checks:
+            return subprocess.run(command, **kwargs)
         name = str(command[0])
         code = check_exit_codes.get(name, 0)
         return SimpleNamespace(returncode=code, stdout=f"{name} output", stderr="")
@@ -92,9 +95,9 @@ def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamp
         approval_verifier=lambda token, digest, actor: True,
         audit_sink=events.append,
         required_checks=[
-            CheckCommand("secret_scan", ("secret-scan", "."), "secret-scanner", "1.0"),
-            CheckCommand("secure_code_review", ("secure-review", "."), "secure-review", "1.0"),
-            CheckCommand("tests", ("pytest", "-q"), "pytest", "8.0"),
+            CheckCommand("secret_scan", (sys.executable, "-c", "print(0)"), "secret-scanner", "1.0"),
+            CheckCommand("secure_code_review", (sys.executable, "-c", "print(0)"), "secure-review", "1.0"),
+            CheckCommand("tests", (sys.executable, "-c", "print(0)"), "pytest", "8.0"),
         ],
         process_runner=runner,
         policy_fetcher=fetcher,
@@ -234,3 +237,19 @@ def test_host_requires_all_mandatory_check_classes(tmp_path):
             approval_verifier=lambda *args: True, audit_sink=lambda event: None,
             required_checks=[CheckCommand("tests", ("pytest", "-q"), "pytest", "8.0")],
         )
+
+
+def test_host_executes_trusted_checks_as_real_processes(tmp_path):
+    host, root, _ = build_host(tmp_path, run_real_checks=True)
+    def agent(_context):
+        (root / "app.py").write_text("print('safe')\n", encoding="utf-8")
+    result = host.run_task(
+        "Implement a secure module", agent,
+        task_id="real-checks", agent_id="test-agent",
+        audit_file=".tsar/runs/real-checks.json",
+        output_evidence_file=".tsar/evidence/real-checks.json",
+        changed_files_provider=lambda: ["app.py"],
+        domains=["development"],
+    )
+    assert result.status == "PASS"
+    assert all(item["status"] == "PASS" and item["exit_code"] == 0 for item in result.check_results)
