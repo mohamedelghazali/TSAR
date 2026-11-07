@@ -58,7 +58,7 @@ def event(tmp_path, name="PreToolUse", **extra):
 def setup_env(monkeypatch, tmp_path, scopes="repo:read,repo:write"):
     monkeypatch.setenv("TSAR_CLAUDE_DOMAINS", "development")
     monkeypatch.setenv("TSAR_CLAUDE_SCOPES", scopes)
-    monkeypatch.setenv("TSAR_CLAUDE_AUDIT_DIR", str(tmp_path / "private-audit"))
+    monkeypatch.setenv("TSAR_CLAUDE_AUDIT_DIR", str(tmp_path / "private-audit"))\n    monkeypatch.setenv("CLAUDE_CODE_DISABLE_FILE_MENTIONS", "1")
 
 
 def prime_session(tmp_path, monkeypatch):
@@ -93,6 +93,15 @@ def test_user_prompt_submit_injects_pinned_policy_paths_and_materializes_hashed_
     assert set(state["read_policy_files"]) == set(paths)
 
 
+def test_prompt_is_blocked_when_file_mention_bypass_is_not_disabled(tmp_path, monkeypatch):
+    setup_env(monkeypatch, tmp_path)
+    monkeypatch.delenv("CLAUDE_CODE_DISABLE_FILE_MENTIONS")
+    with pytest.raises(ClaudeHookError, match="@file Read-hook bypass"):
+        handle_event(
+            event(tmp_path, "UserPromptSubmit"),
+            preflight=lambda root, domains: report(),
+            policy_fetcher=fetcher,
+        )
 def test_user_prompt_submit_fails_closed_when_preflight_fails(tmp_path, monkeypatch):
     setup_env(monkeypatch, tmp_path)
     def fail(_root, _domains):
