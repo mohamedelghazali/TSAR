@@ -5,7 +5,7 @@ fails closed unless the service returns an Ed25519-signed COMPLIANCE-retention r
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import base64
 import hashlib
 import json
@@ -171,7 +171,7 @@ def _verify_receipt(receipt: dict, *, service_id: str, public_key: Ed25519Public
         now = datetime.now(timezone.utc)
         if anchored_at.tzinfo is None or retain_until.tzinfo is None:
             raise ValueError("timezone required")
-        if anchored_at > now.replace(microsecond=0) + __import__("datetime").timedelta(minutes=5):
+        if anchored_at > now.replace(microsecond=0) + timedelta(minutes=5):
             raise ValueError("anchor timestamp is in the future")
         if retain_until <= now:
             raise ValueError("retention period has expired")
