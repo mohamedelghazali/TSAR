@@ -15,10 +15,23 @@ def main() -> int:
         if not base.exists():
             continue
         for f in base.rglob("*.md"):
+            text = f.read_text(errors="ignore")
+            # Short provider-specific files are intentionally retained as
+            # backward-compatible pointers to the single canonical policy.
+            # They are valid only when located directly in prompts/ and
+            # explicitly marked as migration pointers to universal.md.
+            is_legacy_prompt_pointer = (
+                f.parent == ROOT / "prompts"
+                and f.name not in {"universal.md", "global-bootstrap.md"}
+                and "Legacy Compatibility Pointer" in text
+                and "prompts/universal.md" in text
+                and "not an independent TSAR policy" in text
+            )
+            if is_legacy_prompt_pointer:
+                continue
             if f.stat().st_size < MIN_BYTES:
                 bad.append((f, f"{f.stat().st_size} bytes"))
                 continue
-            text = f.read_text(errors="ignore")
             if len([l for l in text.splitlines() if l.strip()]) < MIN_LINES:
                 bad.append((f, f"{len(text.splitlines())} lines"))
         for f in base.rglob("*.yml"):
