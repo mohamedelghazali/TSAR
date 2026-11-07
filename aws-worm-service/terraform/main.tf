@@ -97,7 +97,7 @@ resource "aws_s3_bucket_policy" "anchors" {
         Sid       = "DenyShortRetention"
         Effect    = "Deny"
         Principal = "*"
-        Action    = "s3:PutObject"
+        Action    = ["s3:PutObject", "s3:PutObjectRetention"]
         Resource  = "${aws_s3_bucket.anchors.arn}/*"
         Condition = {
           NumericLessThan = {
