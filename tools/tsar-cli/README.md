@@ -38,7 +38,7 @@ tsar init . --agent cursor
 
 ## Lifecycle audit verification
 
-Run `tsar lifecycle-verify --audit-file .tsar/runs/run.json --trusted-reviewers C:/secure/tsar/trusted-reviewers.json` to re-hash every evidence file and verify each Ed25519 reviewer signature against an external trust keyring. Exit code 0 means the local evidence and signatures are consistent; 1 means verification findings; 2 means the audit or trust store could not be verified.
+Run `tsar lifecycle-verify --audit-file .tsar/runs/run.json --trusted-reviewers C:/secure/tsar/trusted-reviewers.json` to re-hash every evidence file and verify each Ed25519 reviewer signature against an external trust keyring. Exit code 0 means evidence integrity is valid and every lifecycle gate is complete. Exit code 1 means invalid evidence, an incomplete lifecycle, or a signed FAIL decision; inspect `integrity_status` and `lifecycle_status` separately. Exit code 2 means the audit or trust store could not be verified.
 
 ## Authenticated lifecycle evidence
 
@@ -57,7 +57,7 @@ A gate can no longer be approved by supplying an arbitrary `--actor` label. `lif
 }
 ```
 
-Keep this keyring outside the repository, restrict write access (POSIX mode 0600 or stricter), and protect private keys separately. The reviewer signs the canonical UTF-8 JSON representation of the payload (sorted keys, compact separators, no ASCII escaping). The payload must contain schema `tsar/reviewer-attestation-payload/v1`, audit path and SHA-256 snapshot, upstream commit, gate, decision, key ID, reviewer identity, evidence path/hash/size, and timezone-aware issue time. The signed envelope schema is `tsar/reviewer-attestation/v1` and contains `key_id`, `payload`, and Base64 `signature`.
+Keep this keyring outside the repository, restrict write access (POSIX mode 0600 or stricter), and protect private keys separately. The reviewer signs the canonical UTF-8 JSON representation of the payload (sorted keys, compact separators, no ASCII escaping). The payload must contain schema `tsar/reviewer-attestation-payload/v1`, audit path and a `tsar/lifecycle-context/v1` SHA-256 binding, upstream commit, gate, decision, key ID, reviewer identity, evidence path/hash/size, and timezone-aware issue time. The context binding covers all immutable run fields and the exact gate-name set while excluding mutable gate decisions and evidence entries. The signed envelope schema is `tsar/reviewer-attestation/v1` and contains `key_id`, `payload`, and Base64 `signature`.
 
 The payload can be prepared with `build_attestation_payload()` from `lifecycle_evidence.py`; sign its canonical JSON bytes with the trusted key's Ed25519 private key, then store the envelope JSON as the `--attestation` file. The verifier derives the actor from the external keyring; it never trusts an actor string supplied on the command line.
 
@@ -68,7 +68,7 @@ tsar lifecycle-evidence --audit-file .tsar/runs/run.json --gate core_policy_revi
 tsar lifecycle-verify --audit-file .tsar/runs/run.json --trusted-reviewers C:/secure/tsar/trusted-reviewers.json
 ```
 
-Legacy unsigned evidence is intentionally reported as unauthenticated. A valid signature proves possession of a trusted private key and authorization encoded in the external keyring; it does not independently prove the human's identity, evidence truth, reviewer independence, or organizational authority. Protect the keyring and private keys with an independently administered process. The audit record remains locally mutable/deletable; signed events or an external append-only log are still required for tamper resistance.
+Legacy attestations without the lifecycle-context binding are intentionally reported as unauthenticated and must be regenerated. An empty evidence list with pending gates is reported as `INCOMPLETE`, never as a successful completed run. `integrity_status` reports cryptographic/evidence consistency; `lifecycle_status` reports `COMPLETE`, `IN_PROGRESS`, or `FAILED`; overall `status` is `PASS` only when both integrity is valid and every gate is complete. Legacy unsigned evidence is intentionally reported as unauthenticated. A valid signature proves possession of a trusted private key and authorization encoded in the external keyring; it does not independently prove the human's identity, evidence truth, reviewer independence, or organizational authority. Protect the keyring and private keys with an independently administered process. The audit record remains locally mutable/deletable; signed events or an external append-only log are still required for tamper resistance.
 
 ## Lifecycle planning boundaries
 

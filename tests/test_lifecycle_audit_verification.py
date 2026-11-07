@@ -152,3 +152,60 @@ def test_verify_audit_rejects_invalid_record(tmp_path):
 
     with pytest.raises(LifecycleEvidenceError, match="unsupported lifecycle audit schema"):
         verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+
+
+def test_empty_evidence_is_incomplete_not_a_success(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+    assert result["integrity_status"] == "PASS"
+    assert result["lifecycle_status"] == "IN_PROGRESS"
+    assert result["status"] == "INCOMPLETE"
+    assert result["evidence_count"] == 0
+
+
+def test_audit_context_tampering_invalidates_signed_attestation(tmp_path):
+    root, audit, _, keyring, private_key = make_run(tmp_path)
+    attest(root, audit, keyring, private_key)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["task"] = {"description": "tampered after reviewer approval"}
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+    assert result["integrity_status"] == "FAIL"
+    assert result["status"] == "FAIL"
+    assert any(item["status"] == "UNAUTHENTICATED" for item in result["findings"])
+
+
+def test_gate_set_tampering_invalidates_signed_attestation(tmp_path):
+    root, audit, _, keyring, private_key = make_run(tmp_path)
+    attest(root, audit, keyring, private_key)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["gates"]["release_approval"] = "PENDING"
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+    assert result["integrity_status"] == "FAIL"
+    assert result["status"] == "FAIL"
+
+
+def test_symlinked_parent_directory_is_rejected_for_evidence(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    (root / "evidence-link").symlink_to(root / "evidence", target_is_directory=True)
+    with pytest.raises((LifecycleEvidenceError, OSError)):
+        from lifecycle_evidence import _safe_relative_file
+        _safe_relative_file(root, "evidence-link/review.txt")
+
+
+def test_audit_symlink_is_rejected(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    link = root / "audit-link.json"
+    link.symlink_to(audit)
+    with pytest.raises(LifecycleEvidenceError):
+        verify_audit(link, repo_root=root, trusted_reviewers_file=keyring)
+
+
+def test_audit_without_review_gates_is_rejected(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["gates"] = {"upstream_preflight": "PASS"}
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(LifecycleEvidenceError, match="at least one lifecycle review gate"):
+        verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
