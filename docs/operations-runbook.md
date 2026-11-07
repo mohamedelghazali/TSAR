@@ -1,6 +1,19 @@
 # Operations Runbook
 
-## AWS WORM Service — GitHub-only deployment
+## Core TSAR release qualification — GitHub-only
+
+The TSAR core release is qualified through GitHub Actions and repository
+artifacts. No external cloud account, AWS console work, credential setup,
+resource provisioning, or live AWS test is required for the core `1.2.0`
+release. Use the repository's CI and release workflows as the authoritative
+GitHub-side evidence.
+
+The AWS WORM deployment section below is optional and separate. Do not run it
+as part of the core release qualification. Without an actual deployment and
+live smoke test, describe the WORM service only as an implementation candidate,
+never as operational or production-verified.
+
+## Optional AWS WORM Service — GitHub-dispatched deployment
 
 The AWS WORM anchor service is deployed through the manually dispatched
 GitHub Actions workflow
