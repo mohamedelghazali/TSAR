@@ -123,8 +123,8 @@ def validate_record(record: Any) -> dict:
 
     if data["result"] not in RESULTS:
         raise EvidenceValidationError("invalid result")
-    if not isinstance(data["checks"], list) or not isinstance(data["evidence_artifacts"], list):
-        raise EvidenceValidationError("checks and evidence_artifacts must be lists")
+    if not isinstance(data["checks"], list) or not data["checks"] or not isinstance(data["evidence_artifacts"], list) or not data["evidence_artifacts"]:
+        raise EvidenceValidationError("checks and evidence_artifacts must be non-empty lists")
     for index, item in enumerate(data["checks"]):
         check = _object(item, f"checks[{index}]")
         allowed = {"check_id", "status", "tool", "version", "command", "exit_code", "reason"}
@@ -149,6 +149,9 @@ def validate_record(record: Any) -> dict:
         if artifact.keys() - allowed or not {"path", "sha256", "kind"} <= artifact.keys():
             raise EvidenceValidationError(f"evidence_artifacts[{index}] fields do not match schema")
         _string(artifact["path"], f"evidence_artifacts[{index}].path")
+        artifact_path = Path(artifact["path"])
+        if artifact_path.is_absolute() or ".." in artifact_path.parts or "." in artifact_path.parts:
+            raise EvidenceValidationError(f"evidence_artifacts[{index}].path must be a safe relative path")
         _digest(artifact["sha256"], f"evidence_artifacts[{index}].sha256", SHA256)
         _string(artifact["kind"], f"evidence_artifacts[{index}].kind")
         if "sanitized" in artifact and not isinstance(artifact["sanitized"], bool):
