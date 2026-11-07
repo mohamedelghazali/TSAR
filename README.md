@@ -56,7 +56,7 @@ TSAR operates as a coordinated security workflow across five engineering layers:
 
 1. **Governance and policy — `system/`:** establishes the framework's security baseline, prohibited patterns, enforcement levels, and lifecycle expectations. This layer defines how security requirements are interpreted and handled across the development process.
 2. **Security knowledge base — `rules/` and `manifest.yaml`:** organizes active requirements across 37 domains and provides a structured inventory that can be referenced by people, agents, and validation tools.
-3. **Agent and developer integration — `prompts/` and `skills/`:** connects the governance model to supported AI coding agents and developer workflows. Agent adapters make the framework usable across different environments while skills expose repeatable task-specific capabilities.
+3. **Agent and developer integration — `prompts/`, `integrations/`, and `skills/`:** one canonical instruction set and 15 compatibility profiles connect the governance model to supported AI coding agents. Narrow native adapters are maintained separately; skills expose repeatable task-specific capabilities.
 4. **Technical assessment and automation — `tools/`:** supplies scanners and utilities for secret detection, secure code review, cryptographic inventory, threat-modeling workflows, CLI operations, orchestration, language-server integration, and reporting.
 5. **Delivery and repository controls — `integrations/` and `.github/`:** brings validation into the software delivery lifecycle through hooks, CI workflows, tests, policy checks, and reviewable outputs. Teams can configure required checks as merge gates in their repositories.
 
