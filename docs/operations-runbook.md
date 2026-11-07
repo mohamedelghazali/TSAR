@@ -1,42 +1,57 @@
 # Operations Runbook
 
-## Daily
-- CI must pass on main.
-- `auto-update-rules` workflow may open a PR; review and merge within 7 days.
-- Alert on any secret detection in production branches.
+## AWS WORM Service — GitHub-only deployment
 
-## Weekly
-- Review `cbom.json` diffs; ensure no new weak algorithms.
-- Check agent-generated commits; sample review.
-- Rotate any non-prod credentials used in tests.
+The AWS WORM anchor service is deployed through the manually dispatched
+GitHub Actions workflow
+`.github/workflows/aws-worm-deploy.yml`. Ordinary repository CI performs
+static validation and isolated tests only; it does not provision AWS.
 
-## Monthly
-- Re-run full scanner on default branch.
-- Reconcile SBOM with actual dependencies.
-- Tabletop exercise: one incident scenario from `docs/incident-response.md`.
+### One-time prerequisites
 
-## Quarterly
-- Full restore test from backups.
-- Rule efficacy review: which rules caught real findings.
-- Threat model refresh for Tier-1 systems.
-- Dependency audit: remove unused packages.
+1. In the target AWS account, enable the GitHub OIDC provider
+   `token.actions.githubusercontent.com`.
+2. Create a dedicated deployment IAM role trusted for audience
+   `sts.amazonaws.com` and subject
+   `repo:mohamedelghazali/TSAR:environment:aws-production`. Restrict its
+   permissions to the TSAR WORM resources, Terraform state bucket, one
+   Secrets Manager token, and `iam:PassRole` only to the Lambda execution role.
+3. Create the GitHub environment `aws-production` and configure required
+   reviewers. The deployment workflow uses this environment.
+4. Create a high-entropy bearer token in AWS Secrets Manager. Only its ARN is
+   entered into the workflow; never expose the token in GitHub inputs, source,
+   Terraform variables, or logs.
+5. Select two distinct globally unique S3 bucket names: a versioned/encrypted
+   Terraform state bucket and the immutable evidence archive.
+6. Confirm the target region supports the KMS Ed25519 key type. Decide the
+   Object Lock COMPLIANCE retention period and costs before deployment.
 
-## Annually
-- Cryptographic inventory review; plan PQC migration milestones.
-- Rotate KEKs and root keys.
-- Penetration test Tier-1 systems.
-- Review and update `docs/security-model.md`.
+### Deploy and qualify
 
-## Optional AWS WORM Service Operations
+Open **Actions → AWS WORM Deploy and Live Qualification → Run workflow**.
 
-The AWS WORM anchor service is not deployed by repository CI. Do not treat a successful Terraform validation or isolated test as evidence of an operational AWS deployment.
+- Run `plan-only` first and inspect the complete Terraform plan.
+- For deployment, select `apply` and explicitly acknowledge that S3
+  Object Lock COMPLIANCE retention is irreversible for retained object
+  versions. The workflow applies the saved plan using Terraform's S3 lockfile
+  backend.
+- The live test verifies unauthenticated rejection, authenticated append,
+  KMS Ed25519 receipt signature, latest-anchor read, idempotent retry, and
+  retention metadata. The workflow also verifies S3 versioning, Object Lock
+  COMPLIANCE mode, and public-access blocking.
+- The workflow exports the public KMS trust file as the
+  `tsar-worm-service-trust` Actions artifact. Verify its printed fingerprint
+  through an independent administrative channel before distributing it to
+  TSAR clients.
+- Record the workflow run URL, AWS account/region, resource identifiers,
+  retention configuration, test results, and operational owner. Never record
+  bearer tokens or other secrets.
 
-Before enabling the service:
-- Obtain explicit owner approval for the target AWS account, region, resources, retention period, and expected costs.
-- Review the Terraform plan and IAM permissions before applying.
-- Provision the bearer token through Secrets Manager; never commit it or pass it in shell history.
-- Export the KMS Ed25519 public trust file to a protected location outside the repository and independently verify its fingerprint.
-- Run live integration checks for API authentication, receipt signature verification, S3 Object Lock COMPLIANCE retention, DynamoDB sequencing/idempotency, and failure/retry behavior.
-- Record the deployed resource identifiers, verification evidence, retention settings, and operational owner without recording secrets.
+Do not claim the service is operational until the apply and every live test
+step succeed. Do not run `terraform destroy` against retained evidence or
+shorten COMPLIANCE retention. Keep Terraform state access separate from the
+Lambda runtime role.
 
-A permanent general-purpose Staging environment is not a TSAR completion prerequisite. If AWS deployment is undertaken, use an isolated account or bounded test deployment appropriate to that operation. Do not claim production readiness until the live checks above pass.
+A permanent general-purpose Staging environment is not a TSAR completion
+prerequisite. An isolated AWS deployment is sufficient for the live
+qualification; it does not imply a permanent Staging environment.
