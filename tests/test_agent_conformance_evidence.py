@@ -101,3 +101,25 @@ def test_result_vocabulary_is_closed():
         assert "invalid result" in str(exc)
     else:
         raise AssertionError("unknown result must be rejected")
+
+
+def test_empty_checks_or_artifacts_cannot_be_passed():
+    record = valid_record()
+    record["checks"] = []
+    try:
+        validator.validate_record(record)
+    except validator.EvidenceValidationError as exc:
+        assert "non-empty lists" in str(exc)
+    else:
+        raise AssertionError("empty check evidence must be rejected")
+
+
+def test_artifact_path_traversal_is_rejected():
+    record = valid_record()
+    record["evidence_artifacts"][0]["path"] = "../outside.txt"
+    try:
+        validator.validate_record(record)
+    except validator.EvidenceValidationError as exc:
+        assert "safe relative path" in str(exc)
+    else:
+        raise AssertionError("artifact path traversal must be rejected")
