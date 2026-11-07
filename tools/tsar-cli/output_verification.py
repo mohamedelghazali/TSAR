@@ -73,7 +73,7 @@ class OutputGate:
             raise OutputGateError("TSAR commit SHA must be a 40-character immutable SHA")
         if not manifest_version or not isinstance(manifest_sha256, str) or not _SHA256.fullmatch(manifest_sha256):
             raise OutputGateError("Manifest version and SHA-256 are required")
-        if enforcement_level not in {"E2", "E3", "E4", "E5"}:
+        if enforcement_level not in {"E2", "E3", "E4", "E5", "E6"}:
             raise OutputGateError("Unsupported enforcement level")
         self.provenance = {
             "repository": "mohamedelghazali/TSAR",

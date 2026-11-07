@@ -16,6 +16,7 @@ The contract is an integration boundary, not a claim that TSAR can change model 
 | E3 — Tool boundary | The adapter checks tool/action requests against the task policy and authorization scope before dispatch | Covered tool calls are gated; uncovered tools are not |
 | E4 — Output/commit gate | Generated changes are scanned and policy checks run before acceptance or merge | Covered repository changes are gated by the configured checks |
 | E5 — Attested lifecycle | Required review gates are supported by verifiable evidence and authorized reviewer attestations | The recorded lifecycle gates are evidenced; this does not prove absence of all vulnerabilities |
+| E6 — Reference host conformance | One tested host path composes pinned policy injection, guarded tool dispatch, real output checks, and E5 evidence handling | Host-specific conformance only; no universal provider enforcement, and lifecycle completion still requires every E5 reviewer gate |
 
 An integration must report its actual highest level and the specific paths covered. Levels are cumulative only when every preceding requirement is met.
 
@@ -138,3 +139,10 @@ A prompt file, Agent Skill, MCP tool description, or repository instruction file
 The repository provides policy files, agent instructions and skills, an immutable upstream preflight verifier, the `tsar agent-gate` launch adapter, a reusable `ToolBoundary` dispatch API, lifecycle planning and initialization, local scanning, repository CI, and signed lifecycle evidence primitives. Automated tests cover the CLI launch gate and the reusable dispatch boundary.
 
 The current E2 claim applies only to commands launched through `tsar agent-gate`. The `ToolBoundary` API is an E3 building block, not proof that any named provider integration intercepts every tool call. A host integration must register tools in trusted code, supply authenticated identity/scopes, verify action-bound approvals, persist audit events, route every covered invocation through the boundary, and pass host-level bypass/conformance tests before E3 can be claimed for that integration. Closed or chat-only model products that expose no supported pre-execution or tool-dispatch integration remain outside TSAR's direct enforcement boundary.
+
+
+### E6 reference host integration
+
+The `tools/tsar-cli/reference_host.py` module composes the controlled E2-E5 path: it initializes an evidence-backed lifecycle run, fetches and hash-checks the exact pinned policy content, injects that content into the host agent callback, routes the exposed tools through `ToolBoundary`, and runs trusted host-configured checks over the host-collected changed-file set. It requires secret scanning, secure code review, and repository tests. Passing output evidence is written but the E5 `output_verification` gate remains `PENDING` until an authorized external reviewer signs it. See [E6 Reference Host](e6-reference-host.md).
+
+E6 may be claimed only for a concrete host runtime whose actual invocation and tool surfaces pass end-to-end bypass/conformance tests. The reference adapter is not a sandbox, cannot prove a model cognitively read or obeyed the injected policy, and does not intercept capabilities the host exposes outside its guarded dispatcher. A Python callback is not an isolation boundary. The reference adapter tests establish the library contract, not compatibility with every external provider.

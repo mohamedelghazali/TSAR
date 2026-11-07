@@ -11,6 +11,7 @@
 | `tsar drift` | Detect drift between local and remote manifest (legacy version/file-set comparison) |
 | `tsar agent-gate [--domain NAME] -- COMMAND [ARGS...]` | Fail-closed preflight gate before launching a controlled agent command; exports pinned provenance via environment variables |
 | `tool_boundary.ToolBoundary` | Python dispatch API for registered tools; enforces action/resource/scope checks, action-bound approvals, and audit events before dispatch |
+| `reference_host.ReferenceHost` | E6 reference host adapter composing pinned policy injection, guarded tool dispatch, trusted process checks, and E5 evidence handoff; host-specific, not a provider-wide interceptor |
 | `tsar verify-upstream [--domain NAME]` | Pin upstream to one commit, validate manifest and all active paths, and fetch core plus selected domain rules (fail-closed) |
 | `tsar threat-model <file>` | STRIDE threat model |
 | `tsar lifecycle-plan <task> [--domain NAME] [--impact auto\|standard\|high]` | Create a deterministic lifecycle plan; does not execute or approve work |
@@ -125,3 +126,8 @@ The anchor client refuses incomplete or invalid evidence integrity, rejects redi
 Import `ToolBoundary`, `ToolSpec`, `ActionRequest`, and `AuthorizationContext` from `tool_boundary`. Register tools in trusted host code and route every actual tool call through `ToolBoundary.dispatch`. The host must supply an authenticated principal, least-privilege scopes, a verifier for single-action approvals, and a durable audit sink. Unknown tools and out-of-scope actions fail closed. Credential access, deployment, irreversible actions, and explicitly approval-gated tools require a verified approval bound to the exact action digest. See `docs/tool-boundary-adapter.md` for the trust contract and limitations.
 
 This API does not automatically intercept provider tools, sandbox child processes, or prevent bypass calls. Claim E3 only for host dispatch paths demonstrably routed through the boundary.
+
+
+## E6 reference host integration
+
+See [E6 Reference Host Integration](../../docs/e6-reference-host.md) for the Python API, trusted host dependencies, execution sequence, end-to-end conformance requirements, and assurance boundaries. A `ReferenceHost` result of `PASS` means only that the configured output checks passed; the lifecycle's reviewer gates remain pending until externally attested.
