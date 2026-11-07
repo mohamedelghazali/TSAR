@@ -70,7 +70,7 @@ The KMS `Sign` call uses `ED25519_SHA_512` with `MessageType=RAW`, matching the 
 
 ## Security boundaries and remaining production work
 
-- CI only performs static validation. It does not create AWS resources, access credentials, or prove that a deployed account has the intended controls.
+- Ordinary pull-request and push CI performs static validation only. The dedicated GitHub Actions workflow can provision AWS only when manually dispatched in apply mode with an OIDC deployment role, a configured production environment, and the explicit retention acknowledgement.
 - The API bearer token is a shared credential. Rotate it through Secrets Manager and keep it separate from the KMS signing key. Consider adding a dedicated authorizer/WAF and per-client credentials before multi-tenant use.
 - The Lambda execution role cannot delete S3 objects or versions. S3 COMPLIANCE retention protects retained versions against deletion during the retention period, but it does not prevent account compromise, policy mistakes before upload, or deletion after retention expires.
 - DynamoDB is the live index and sequencing authority; S3 Object Lock is the immutable evidence archive. Protect the table, backups, Terraform state, deployment role, and CloudTrail separately.
@@ -78,7 +78,7 @@ The KMS `Sign` call uses `ED25519_SHA_512` with `MessageType=RAW`, matching the 
 - The service currently permits only configured repository names. Review this allowlist before onboarding another repository.
 - The combined decoded audit snapshot and evidence archive is limited to 4 MiB to remain within synchronous Lambda invocation payload constraints.
 - The S3 object and DynamoDB transaction cannot be atomic together. Retained orphan objects after failed transactions are expected and must be monitored/reconciled, never treated as accepted anchors.
-- This implementation is a deployment candidate, not a claim of operational WORM protection. No AWS resources have been deployed or independently audited by this repository change.
+- The implementation and workflow do not themselves establish operational WORM protection. Only a successful GitHub Actions apply followed by the authenticated live qualification and deployed-control checks can establish the recorded operational state; green PR CI alone is not deployment evidence.
 
 ## API compatibility
 

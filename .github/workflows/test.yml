@@ -39,15 +39,12 @@ jobs:
           assert len(wheels) == 1, f"expected one CLI wheel, found {len(wheels)}"
           with zipfile.ZipFile(wheels[0]) as wheel:
               names = set(wheel.namelist())
-              required = {
-                  "lifecycle_anchor.py",
-                  "lifecycle_evidence.py",
-                  "tsar.py",
-                  "tsar_cli-1.1.1.dist-info/entry_points.txt",
-              }
+              required = {"lifecycle_anchor.py", "lifecycle_evidence.py", "tsar.py"}
               missing = required - names
               assert not missing, f"CLI wheel is missing required files: {sorted(missing)}"
-              entry_points = wheel.read("tsar_cli-1.1.1.dist-info/entry_points.txt").decode()
+              entry_point_files = [name for name in names if name.endswith(".dist-info/entry_points.txt")]
+              assert len(entry_point_files) == 1, f"expected one entry_points.txt, found {entry_point_files}"
+              entry_points = wheel.read(entry_point_files[0]).decode()
               assert "tsar = tsar:main" in entry_points
           print("CLI wheel contains lifecycle modules and the tsar entry point.")
           PY

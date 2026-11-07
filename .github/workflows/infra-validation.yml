@@ -42,6 +42,7 @@ jobs:
         run: |
           python -m py_compile aws-worm-service/lambda/handler.py
           python -m py_compile aws-worm-service/tools/export_service_trust.py
+          python -m py_compile aws-worm-service/tools/live_smoke_test.py
 
   kubernetes:
     name: Kubernetes Schema Validation
