@@ -35,7 +35,7 @@ DOMAIN = {"rules/development/secure-sdlc.md": b"# Secure SDLC\n"}
 MANIFEST = (
     "repository: https://github.com/mohamedelghazali/TSAR\n"
     "version: 1.2.0\n"
-    "lifecycle:\n  fail_closed: true\n  fetch_before_task: true\n"
+    "lifecycle:\n  fail_closed: true\n  fetch_before_task: true\n  check_url: https://raw.githubusercontent.com/mohamedelghazali/TSAR/main/manifest.yaml\n"
     "enforcement:\n  default_mode: strict\n  allow_advisory_fallback: false\n"
     "active_files:\n  core:\n"
     + "".join(f"    - {path}\n" for path in CORE)
