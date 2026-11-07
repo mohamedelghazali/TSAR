@@ -90,4 +90,4 @@ def test_launches_only_after_valid_preflight_and_exports_provenance(tmp_path):
     assert child_env["TSAR_UPSTREAM_COMMIT_SHA"] == "a" * 40
     assert child_env["TSAR_MANIFEST_VERSION"] == "1.2.0"
     assert child_env["TSAR_PREFLIGHT_REPORT"] == str(report.resolve())
-    assert calls[0][0][-2:] == ["--domain", "ai_security"]
+    assert calls[0][0][-4:-2] == ["--domain", "ai_security"]
