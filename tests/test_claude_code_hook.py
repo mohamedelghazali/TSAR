@@ -70,7 +70,7 @@ def prime_session(tmp_path, monkeypatch):
         policy_fetcher=fetcher,
     )
     context = result["hookSpecificOutput"]["additionalContext"]
-    assert "Read every pinned TSAR policy file" in context
+    assert "Before any other tool call, read every policy file" in context
     paths = context.split("Policy files:\n", 1)[1].splitlines()
     for index, path in enumerate(paths):
         handle_event(
