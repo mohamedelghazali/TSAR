@@ -152,7 +152,9 @@ def test_dispatch_error_is_audited_and_propagated():
         boundary.dispatch(request(), fail)
     assert events[-1]["outcome"] == "DISPATCH_ERROR"
     assert events[-1]["error_type"] == "RuntimeError"
-\n\ndef test_authorize_records_allow_without_claiming_execution():
+
+
+def test_authorize_records_allow_without_claiming_execution():
     boundary, events = make_boundary()
     normalized = boundary.authorize(request())
     assert normalized.tool == "repo.write"
