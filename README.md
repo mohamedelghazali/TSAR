@@ -2,7 +2,7 @@
 
 > **Stop vulnerabilities at the source. Secure every line of AI-generated code.**
 
-TSAR is an AI security governance layer for AI-assisted software development. It provides **171 active security rule files across 37 domains**, covering **Cryptography, Cloud Security, OWASP, and more**, together with dedicated instruction packs for **15 AI coding agents**.
+TSAR is an AI security governance layer for AI-assisted software development. It provides **171 active security rule files across 37 domains**, covering **Cryptography, Cloud Security, OWASP, and more**, together with **one universal instruction set** and **15 compatibility profiles** for supported AI coding agents.
 
 Built for security-conscious engineering teams, TSAR brings security policy closer to the point where code is generated—then reinforces it with local scanners, repository hooks, CI checks, and policy validation.
 
@@ -28,7 +28,7 @@ Its capabilities span:
 
 1. **Security policy architecture:** core directives, prohibited-pattern catalogs, enforcement levels, and lifecycle requirements establish a consistent baseline for engineering work.
 2. **Domain security knowledge base:** a structured inventory of active rules across 37 security domains gives teams reusable requirements for application, cloud, infrastructure, cryptography, identity, and other engineering areas.
-3. **Multi-agent integration:** dedicated instruction packs and a universal onboarding path connect the same governance model to 15 AI coding-agent environments.
+3. **Multi-agent integration:** one canonical instruction set, 15 compatibility profiles, and narrowly scoped native adapters connect the same governance model to supported AI-agent environments.
 4. **Operational security tooling:** skills, scanners, CLI utilities, orchestration, reporting, and language-server components help teams inspect code, inventory cryptographic usage, detect exposed secrets, conduct secure reviews, and structure threat-modeling work.
 5. **Policy and delivery integration:** policy-as-code examples, repository hooks, CI workflows, tests, and validation scripts bring security checks into the development and pull-request lifecycle.
 
@@ -393,7 +393,7 @@ TSAR currently provides dedicated prompt or instruction integrations for:
 - Devin
 - Kimi
 
-**Compatibility note:** support means TSAR provides an agent-specific prompt/instruction path or documented fallback; it does not mean every product supports global skill installation. Available capabilities vary by product, plan, runtime, and permissions. Check the [Agent Compatibility Matrix](docs/agent-compatibility-matrix.md) before choosing an installation method.
+**Compatibility note:** support means TSAR provides an shared universal instruction source and a compatibility profile or documented fallback; it does not mean every product supports global skill installation. Available capabilities vary by product, plan, runtime, and permissions. Check the [Agent Compatibility Matrix](docs/agent-compatibility-matrix.md) before choosing an installation method.
 
 ## Quick Start: Local Project Setup
 
@@ -498,7 +498,7 @@ TSAR therefore reduces risk and improves consistency; it does not guarantee vuln
 | `skills/` | Agent Skills packages and security helper tools |
 | `tools/` | CLI, orchestrator, reports, LSP, dashboard |
 | `integrations/` | CI/CD templates and Git hooks |
-| `prompts/` | Agent-specific and universal instruction files |
+| `prompts/` | One canonical universal instruction set plus backward-compatible migration pointers |
 | `examples/` | Secure and anti-pattern code examples |
 | `docs/` | Architecture, onboarding, compliance mappings, and guides |
 | `policies/` | Policy-as-code examples, including OPA and Cedar policies |
