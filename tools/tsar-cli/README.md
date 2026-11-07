@@ -12,6 +12,11 @@
 | `tsar verify-upstream [--domain NAME]` | Pin upstream to one commit, validate manifest and all active paths, and fetch core plus selected domain rules (fail-closed) |
 | `tsar threat-model <file>` | STRIDE threat model |
 | `tsar lifecycle-plan <task> [--domain NAME] [--impact auto\|standard\|high]` | Create a deterministic lifecycle plan; does not execute or approve work |
+| `tsar lifecycle-start <task> --audit-file PATH [--domain NAME]` | Start a lifecycle run after upstream preflight |
+| `tsar lifecycle-evidence --audit-file PATH --gate NAME --evidence PATH --attestation PATH --trusted-reviewers PATH` | Attach authenticated, evidence-backed reviewer approval to a lifecycle gate |
+| `tsar lifecycle-verify --audit-file PATH --trusted-reviewers PATH` | Verify lifecycle evidence, reviewer signatures, and gate completeness |
+| `tsar lifecycle-anchor --audit-file PATH --trusted-reviewers PATH --endpoint URL --service-trust PATH` | Append a verified lifecycle snapshot to an external signed WORM service |
+| `tsar lifecycle-anchor-verify --audit-file PATH --trusted-reviewers PATH --endpoint URL --service-trust PATH` | Verify the latest external WORM receipt against the local audit |
 | `tsar report [path] [--format html\|json]` | Full report |
 | `tsar compliance <framework>` | Compliance reference check |
 | `tsar init [path] --agent <name>` | Bootstrap TSAR into a project |
