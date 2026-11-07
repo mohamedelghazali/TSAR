@@ -152,6 +152,7 @@ class ReferenceHost:
         *,
         repo_root: str | Path,
         tool_registry: Mapping[str, ToolSpec],
+        dispatchers: Mapping[str, Callable[[Mapping[str, Any]], Any]],
         authorization: AuthorizationContext,
         approval_verifier: Callable[[Any, str, str], bool],
         audit_sink: Callable[[Mapping[str, Any]], None],
@@ -160,18 +161,21 @@ class ReferenceHost:
         policy_fetcher: Callable[[str], bytes] = _default_fetcher,
     ) -> None:
         self.root = Path(repo_root).expanduser().resolve(strict=True)
-        if not tool_registry:
-            raise ReferenceHostError("A trusted host-side tool registry is required")
+        if not tool_registry or set(tool_registry) != set(dispatchers):
+            raise ReferenceHostError("Every registered tool must have exactly one trusted host dispatcher")
         if not callable(audit_sink) or not callable(approval_verifier):
             raise ReferenceHostError("Approval verification and durable audit sink are required")
         self.authorization = authorization
         self.registry = dict(tool_registry)
+        self.dispatchers = dict(dispatchers)
         self.approval_verifier = approval_verifier
         self.audit_sink = audit_sink
         self.process_runner = process_runner
         self.policy_fetcher = policy_fetcher
 
         commands = list(required_checks)
+        if any(not isinstance(item, CheckCommand) for item in commands):
+            raise ReferenceHostError("Required checks must use trusted CheckCommand objects")
         names = [item.name for item in commands]
         if len(names) != len(set(names)) or not REQUIRED_CHECKS.issubset(set(names)):
             raise ReferenceHostError(
@@ -449,7 +453,7 @@ class ReferenceHost:
         The tool registry is policy metadata. The host must provide an explicit
         dispatcher mapping; no function is inferred from a model-supplied name.
         """
-        dispatcher = self.dispatchers.get(tool) if hasattr(self, "dispatchers") else None
+        dispatcher = self.dispatchers.get(tool)
         if dispatcher is None:
             raise ToolBoundaryError(f"No trusted host dispatcher registered for tool: {tool}")
         return dispatcher
