@@ -11,7 +11,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "tsar-cli"))
-from output_verification import CheckResult, OutputGate, OutputGateError\nfrom lifecycle_evidence import (
+from output_verification import CheckResult, OutputGate, OutputGateError
+from lifecycle_evidence import (
     LifecycleEvidenceError, attest_gate, build_attestation_payload, verify_audit,
 )
 
