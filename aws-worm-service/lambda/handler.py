@@ -201,8 +201,8 @@ def _append(request):
         if len(evidence_bytes) != expected_size or digest(evidence_bytes) != expected_sha:
             raise ValueError("evidence archive bytes do not match audit evidence metadata")
         archived_bytes += len(evidence_bytes)
-    if archived_bytes > 5 * 1024 * 1024:
-        raise ValueError("audit and evidence archive exceeds the 5 MiB limit")
+    if archived_bytes > 4 * 1024 * 1024:
+        raise ValueError("audit and evidence archive exceeds the 4 MiB limit")
 
     existing_idem = ddb.get_item(
         TableName=TABLE,
