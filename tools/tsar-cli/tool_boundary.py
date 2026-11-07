@@ -124,8 +124,20 @@ class ToolBoundary:
             raise ToolBoundaryError("Action actor does not match authenticated principal")
         if not isinstance(request.arguments, Mapping):
             raise ToolBoundaryError("Action arguments must be a mapping")
-        spec = self._registry.get(request.tool)
-        digest = action_digest(request)
+        # Snapshot arguments so the dispatched payload matches the approval digest.
+        try:
+            argument_snapshot = json.loads(json.dumps(
+                request.arguments, sort_keys=True, separators=(",", ":"),
+                ensure_ascii=False, allow_nan=False,
+            ))
+        except (TypeError, ValueError) as exc:
+            raise ToolBoundaryError("Action arguments are not canonical JSON data") from exc
+        normalized = ActionRequest(
+            tool=request.tool, operation=request.operation, resource=request.resource,
+            actor=request.actor, arguments=argument_snapshot, approval=request.approval,
+        )
+        spec = self._registry.get(normalized.tool)
+        digest = action_digest(normalized)
 
         reason = None
         if spec is None:
@@ -158,7 +170,7 @@ class ToolBoundary:
             raise ToolBoundaryError(f"Tool action denied: {reason}")
 
         try:
-            result = dispatcher(request.arguments)
+            result = dispatcher(normalized.arguments)
         except Exception as exc:
             self._audit({**event, "outcome": "DISPATCH_ERROR", "error_type": type(exc).__name__})
             raise
