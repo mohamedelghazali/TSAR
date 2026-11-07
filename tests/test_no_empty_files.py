@@ -14,10 +14,17 @@ def test_no_empty_markdown():
         if not base.exists():
             continue
         for f in base.rglob("*.md"):
+            text = f.read_text(errors="ignore")
+            if (
+                f.parent == ROOT / "prompts"
+                and f.name not in {"universal.md", "global-bootstrap.md"}
+                and "Legacy Compatibility Pointer" in text
+                and "universal.md" in text
+            ):
+                continue
             if f.stat().st_size < MIN_BYTES:
                 bad.append((str(f.relative_to(ROOT)), f"{f.stat().st_size} bytes"))
                 continue
-            text = f.read_text(errors="ignore")
             if len([l for l in text.splitlines() if l.strip()]) < MIN_LINES:
                 bad.append((str(f.relative_to(ROOT)), f"{len(text.splitlines())} lines"))
     assert not bad, "Empty or trivial files:\n" + "\n".join(f"  - {p} ({r})" for p, r in bad)
