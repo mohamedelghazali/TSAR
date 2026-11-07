@@ -61,20 +61,23 @@ def _collect_evidence_files(record: dict, root: Path, *, max_bytes: int = 4 * 10
         if not isinstance(relative, str) or not relative:
             raise LifecycleAnchorError("audit evidence path is invalid")
         parts = Path(relative).parts
-        fd = _open_project_file(root, parts)
         try:
-            chunks, size = [], 0
-            while True:
-                chunk = os.read(fd, 1024 * 1024)
-                if not chunk:
-                    break
-                size += len(chunk)
-                if size + total > max_bytes:
-                    raise LifecycleAnchorError("audit and evidence archive exceeds the external service 5 MiB limit")
-                chunks.append(chunk)
-            data = b"".join(chunks)
-        finally:
-            os.close(fd)
+            fd = _open_project_file(root, parts)
+            try:
+                chunks, size = [], 0
+                while True:
+                    chunk = os.read(fd, 1024 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size + total > max_bytes:
+                        raise LifecycleAnchorError("audit and evidence archive exceeds the external service size limit")
+                    chunks.append(chunk)
+                data = b"".join(chunks)
+            finally:
+                os.close(fd)
+        except (OSError, LifecycleEvidenceError) as exc:
+            raise LifecycleAnchorError("cannot safely collect lifecycle evidence file") from exc
         if (not data or size != entry.get("size_bytes")
                 or _sha256(data) != entry.get("sha256")):
             raise LifecycleAnchorError("evidence changed after local lifecycle verification")
