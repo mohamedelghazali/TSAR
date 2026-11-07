@@ -91,7 +91,7 @@ def _latest(run_id):
 
 def _put_snapshot(run_id, anchor_id, request, receipt, retain_until):
     key = "runs/" + run_id + "/" + anchor_id + ".json"
-    body = canonical({"request": request, "audit_snapshot_b64": request["audit_snapshot_b64"], "receipt": receipt})
+    body = canonical({"request": request, "receipt": receipt})
     result = s3.put_object(
         Bucket=BUCKET,
         Key=key,
@@ -130,6 +130,9 @@ def _append(request):
         raise ValueError("invalid idempotency_key")
     if repository not in ALLOWED_REPOSITORIES:
         raise ValueError("repository is not authorized")
+    expected_idempotency_key = digest((run_id + ":" + record_sha).encode("utf-8"))
+    if idem != expected_idempotency_key:
+        raise ValueError("idempotency_key does not match run and record identity")
     if not isinstance(request.get("gate_states"), dict):
         raise ValueError("gate_states must be an object")
     encoded_snapshot = request.get("audit_snapshot_b64")
