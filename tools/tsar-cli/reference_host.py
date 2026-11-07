@@ -7,7 +7,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import inspect
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
