@@ -63,16 +63,19 @@ def _collect_evidence_files(record: dict, root: Path) -> tuple[dict[str, str], i
         parts = Path(relative).parts
         fd = _open_project_file(root, parts)
         try:
-            chunks = []
+            chunks, size = [], 0
             while True:
                 chunk = os.read(fd, 1024 * 1024)
                 if not chunk:
                     break
+                size += len(chunk)
+                if size + total > 5 * 1024 * 1024:
+                    raise LifecycleAnchorError("audit and evidence archive exceeds the external service 5 MiB limit")
                 chunks.append(chunk)
             data = b"".join(chunks)
         finally:
             os.close(fd)
-        if (not data or len(data) != entry.get("size_bytes")
+        if (not data or size != entry.get("size_bytes")
                 or _sha256(data) != entry.get("sha256")):
             raise LifecycleAnchorError("evidence changed after local lifecycle verification")
         encoded = base64.b64encode(data).decode("ascii")
@@ -266,6 +269,7 @@ def anchor_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
     token = os.environ.get(token_env, "")
     if not token:
         raise LifecycleAnchorError(f"required bearer token environment variable is unset: {token_env}")
+    record_before, raw_before = _load_audit(Path(audit_file), root)
     try:
         audit_result = verify_audit(
             Path(audit_file), repo_root=root, trusted_reviewers_file=Path(trusted_reviewers_file)
@@ -275,6 +279,8 @@ def anchor_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
     if audit_result.get("integrity_status") != "PASS":
         raise LifecycleAnchorError("only an audit with PASS evidence integrity can be externally anchored")
     record, raw_audit = _load_audit(Path(audit_file), root)
+    if raw_audit != raw_before:
+        raise LifecycleAnchorError("audit changed during verification; retry after stabilizing the run")
     if len(raw_audit) > 4 * 1024 * 1024:
         raise LifecycleAnchorError("audit snapshot exceeds the external service 4 MiB limit")
     run_id = _run_id(record, repository)
@@ -339,6 +345,7 @@ def verify_external_anchor(audit_file: Path, *, repo_root: Path, trusted_reviewe
     token = os.environ.get(token_env, "")
     if not token:
         raise LifecycleAnchorError(f"required bearer token environment variable is unset: {token_env}")
+    record_before, raw_before = _load_audit(Path(audit_file), root)
     try:
         audit_result = verify_audit(
             Path(audit_file), repo_root=root, trusted_reviewers_file=Path(trusted_reviewers_file)
@@ -348,6 +355,8 @@ def verify_external_anchor(audit_file: Path, *, repo_root: Path, trusted_reviewe
     if audit_result.get("integrity_status") != "PASS":
         raise LifecycleAnchorError("local lifecycle evidence integrity is not PASS")
     record, raw_audit = _load_audit(Path(audit_file), root)
+    if raw_audit != raw_before:
+        raise LifecycleAnchorError("audit changed during verification; retry after stabilizing the run")
     run_id = _run_id(record, repository)
     service_id, public_key = _load_service_trust(Path(service_trust_file), root)
     latest = _verified_latest(
