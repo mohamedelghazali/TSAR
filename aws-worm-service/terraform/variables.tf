@@ -27,7 +27,7 @@ variable "retention_days" {
   type    = number
   default = 365
   validation {
-    condition     = var.retention_days >= 1 && var.retention_days <= 36500
+    condition     = var.retention_days >= 1 && var.retention_days <= 36500 && floor(var.retention_days) == var.retention_days
     error_message = "retention_days must be between 1 and 36500."
   }
 }
