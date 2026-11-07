@@ -77,3 +77,43 @@ class AgentCompatibilityInventoryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+"""Repository-level checks for the agent runtime conformance plan."""
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+PLAN = ROOT / "docs" / "agent-runtime-conformance-plan.md"
+
+
+def test_runtime_conformance_plan_covers_all_fifteen_inventory_entries():
+    text = PLAN.read_text(encoding="utf-8")
+    names = (
+        "Claude (chat)", "Claude Code", "GPT", "DeepSeek-Coder", "Qwen-Coder",
+        "Gemini", "Llama", "Cursor", "GitHub Copilot", "Manus", "Windsurf",
+        "SuperNinja", "Replit Agent", "Devin", "Kimi",
+    )
+    for name in names:
+        assert f"| {name} |" in text
+
+
+def test_runtime_conformance_plan_separates_live_tests_from_ci():
+    text = PLAN.read_text(encoding="utf-8")
+    for required in (
+        "Standard conformance scenarios",
+        "Evidence record",
+        "CI versus live provider testing",
+        "NOT_RUN",
+        "NOT_APPLICABLE",
+        "authenticated",
+        "immutable commit SHA",
+        "three times",
+        "Do not make all 15 live tests mandatory",
+    ):
+        assert required in text
+
+
+def test_plan_does_not_claim_all_providers_have_runtime_enforcement():
+    text = PLAN.read_text(encoding="utf-8")
+    assert "No other provider should be marked live-tested" in text
+    assert "A chat-only interface with no supported interception mechanism may remain E0/E1" in text
