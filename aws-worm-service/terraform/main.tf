@@ -85,7 +85,7 @@ resource "aws_s3_bucket_policy" "anchors" {
         Sid       = "DenyNonComplianceObjectWrites"
         Effect    = "Deny"
         Principal = "*"
-        Action    = "s3:PutObject"
+        Action    = ["s3:PutObject", "s3:PutObjectRetention"]
         Resource  = "${aws_s3_bucket.anchors.arn}/*"
         Condition = {
           StringNotEquals = {
@@ -101,7 +101,7 @@ resource "aws_s3_bucket_policy" "anchors" {
         Resource  = "${aws_s3_bucket.anchors.arn}/*"
         Condition = {
           NumericLessThan = {
-            "s3:object-lock-remaining-retention-days" = var.retention_days
+            "s3:object-lock-remaining-retention-days" = tostring(var.retention_days)
           }
         }
       }
