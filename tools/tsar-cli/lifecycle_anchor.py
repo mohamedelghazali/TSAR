@@ -240,6 +240,8 @@ def anchor_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
     if audit_result.get("integrity_status") != "PASS":
         raise LifecycleAnchorError("only an audit with PASS evidence integrity can be externally anchored")
     record, raw_audit = _load_audit(Path(audit_file), root)
+    if len(raw_audit) > 4 * 1024 * 1024:
+        raise LifecycleAnchorError("audit snapshot exceeds the external service 4 MiB limit")
     run_id = _run_id(record, repository)
     record_digest = _sha256(raw_audit)
     service_id, public_key = _load_service_trust(Path(service_trust_file), root)
