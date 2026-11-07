@@ -24,7 +24,7 @@ def main() -> int:
                 f.parent == ROOT / "prompts"
                 and f.name not in {"universal.md", "global-bootstrap.md"}
                 and "Legacy Compatibility Pointer" in text
-                and "prompts/universal.md" in text
+                and ("(universal.md)" in text or "prompts/universal.md" in text)
                 and "independent TSAR policy" in text
             )
             if is_legacy_prompt_pointer:
