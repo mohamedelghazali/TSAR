@@ -106,7 +106,7 @@ Do not make all 15 live tests mandatory for ordinary pull requests. Use determin
 
 ## Current baseline and next implementation steps
 
-- The repository inventory check validates 15 unique prompt files and their matrix mapping.
+- The repository inventory check validates 15 unique compatibility profiles, one canonical instruction source, legacy migration pointers, and their matrix mapping.
 - The Claude Code integration has a dedicated native hook profile and Windows hook compatibility CI. The current CI result proves that tested hook contract only; it does not prove an authenticated live Claude provider session.
 - The generic `tsar agent-gate` launcher proves E2 only for commands launched through that adapter. It does not intercept tools in an already-running agent.
 - The reusable `ToolBoundary` and reference-host components are building blocks. A provider must not be assigned E3/E6 until its actual host invocation and all claimed tool paths are wrapped and bypass-tested.
