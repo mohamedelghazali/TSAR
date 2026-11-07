@@ -150,6 +150,8 @@ def _load_audit(audit_file: Path, root: Path) -> tuple[Path, dict, bytes]:
         raise LifecycleEvidenceError("unsupported lifecycle audit schema")
     if not isinstance(record.get("gates"), dict) or not record["gates"]:
         raise LifecycleEvidenceError("audit gates must be a non-empty object")
+    if not any(gate != "upstream_preflight" for gate in record["gates"]):
+        raise LifecycleEvidenceError("audit must contain at least one lifecycle review gate")
     if record["gates"].get("upstream_preflight") != "PASS":
         raise LifecycleEvidenceError("upstream_preflight must remain PASS")
     if any(state not in {"PENDING", "PASS", "FAIL"} for state in record["gates"].values()):

@@ -200,3 +200,12 @@ def test_audit_symlink_is_rejected(tmp_path):
     link.symlink_to(audit)
     with pytest.raises(LifecycleEvidenceError):
         verify_audit(link, repo_root=root, trusted_reviewers_file=keyring)
+
+
+def test_audit_without_review_gates_is_rejected(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["gates"] = {"upstream_preflight": "PASS"}
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(LifecycleEvidenceError, match="at least one lifecycle review gate"):
+        verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
