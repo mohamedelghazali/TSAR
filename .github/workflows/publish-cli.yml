@@ -25,14 +25,17 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --upgrade build
       - run: python -m build tools/tsar-cli
+      - name: Verify wheel and source distribution
+        run: python scripts/verify_cli_dist.py tools/tsar-cli/dist
 
   publish:
     name: Build and publish trusted release
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,6 +45,16 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --upgrade build
       - run: python -m build tools/tsar-cli
+      - name: Verify wheel and source distribution
+        run: python scripts/verify_cli_dist.py tools/tsar-cli/dist
+      - name: Generate GitHub SLSA build provenance attestation
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: tools/tsar-cli/dist/*
+      - name: Attach distributions to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" tools/tsar-cli/dist/* --clobber
       - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           packages-dir: tools/tsar-cli/dist/
