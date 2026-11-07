@@ -24,6 +24,11 @@ def setup_run(tmp_path):
     audit = root / "run.json"
     audit.write_text(json.dumps({
         "schema": "tsar/lifecycle-run/v1",
+        "task": {
+            "task": "Review lifecycle controls",
+            "strict_required": True,
+            "required_gates": ["upstream_preflight", "core_policy_review", "release_approval"],
+        },
         "provenance": {"upstream_commit_sha": "a" * 40},
         "gates": {"upstream_preflight": "PASS", "core_policy_review": "PENDING", "release_approval": "PENDING"},
         "evidence": [],
@@ -214,3 +219,12 @@ def test_malformed_reviewer_key_id_in_audit_fails_closed(tmp_path):
     data["evidence"][0]["attestation"]["key_id"] = []
     audit.write_text(json.dumps(data))
     assert verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)["status"] == "FAIL"
+
+
+def test_gate_set_must_match_task_plan(tmp_path):
+    root, audit, keyring, _ = setup_run(tmp_path)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["gates"].pop("release_approval")
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(LifecycleEvidenceError, match="does not match the signed task plan"):
+        verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
