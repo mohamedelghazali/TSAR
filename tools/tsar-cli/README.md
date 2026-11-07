@@ -11,7 +11,8 @@
 | `tsar drift` | Detect drift between local and remote manifest (legacy version/file-set comparison) |
 | `tsar agent-gate [--domain NAME] -- COMMAND [ARGS...]` | Fail-closed preflight gate before launching a controlled agent command; exports pinned provenance via environment variables |
 | `tool_boundary.ToolBoundary` | Python dispatch API for registered tools; enforces action/resource/scope checks, action-bound approvals, and audit events before dispatch |
-| `reference_host.ReferenceHost` | E6 reference host adapter composing pinned policy injection, guarded tool dispatch, trusted process checks, and E5 evidence handoff; host-specific, not a provider-wide interceptor |\n| `claude_code_hook` / `tsar-claude-hook` | Claude Code `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, and `PostToolUseFailure` integration; mandatory pinned-policy reads and strict file-tool allowlist |
+| `reference_host.ReferenceHost` | E6 reference host adapter composing pinned policy injection, guarded tool dispatch, trusted process checks, and E5 evidence handoff; host-specific, not a provider-wide interceptor |
+| `claude_code_hook` / `tsar-claude-hook` | Claude Code `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, and `PostToolUseFailure` integration; mandatory pinned-policy reads and strict file-tool allowlist |
 | `tsar verify-upstream [--domain NAME]` | Pin upstream to one commit, validate manifest and all active paths, and fetch core plus selected domain rules (fail-closed) |
 | `tsar threat-model <file>` | STRIDE threat model |
 | `tsar lifecycle-plan <task> [--domain NAME] [--impact auto\|standard\|high]` | Create a deterministic lifecycle plan; does not execute or approve work |
@@ -131,4 +132,8 @@ This API does not automatically intercept provider tools, sandbox child processe
 ## E6 reference host integration
 
 See [E6 Reference Host Integration](../../docs/e6-reference-host.md) for the Python API, trusted host dependencies, execution sequence, end-to-end conformance requirements, and assurance boundaries. A `ReferenceHost` result of `PASS` means only that the configured output checks passed; the lifecycle's reviewer gates remain pending until externally attested.
-\n\n## Claude Code native enforcement hooks\n\nInstall the CLI into Claude Code's Python environment and copy [the strict hook configuration](../../integrations/claude-code/settings.json) into the target project's `.claude/settings.json`. See [Claude Code enforcement integration](../../docs/claude-code-enforcement.md) for setup, scope configuration, policy-read gating, supported tools, version requirements, and assurance boundaries. The strict profile intentionally blocks Bash, PowerShell, subagents, web tools, and MCP tools until their action policies are implemented and tested.\n
+
+
+## Claude Code native enforcement hooks
+
+Install the CLI into Claude Code's Python environment and copy [the strict hook configuration](../../integrations/claude-code/settings.json) into the target project's `.claude/settings.json`. See [Claude Code enforcement integration](../../docs/claude-code-enforcement.md) for setup, scope configuration, policy-read gating, supported tools, version requirements, and assurance boundaries. The strict profile intentionally blocks Bash, PowerShell, subagents, web tools, and MCP tools until their action policies are implemented and tested.
