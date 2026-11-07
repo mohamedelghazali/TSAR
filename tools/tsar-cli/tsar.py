@@ -154,6 +154,7 @@ def cmd_lifecycle_verify(args) -> int:
         print(f"Lifecycle audit verification ERROR: {exc}", file=sys.stderr)
         return 2
     print(json.dumps(result, indent=2, ensure_ascii=False))
+    # Exit 0 only when evidence integrity is valid and every lifecycle gate is complete.
     return 0 if result["status"] == "PASS" else 1
 
 

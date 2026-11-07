@@ -75,7 +75,9 @@ def test_signed_authorized_reviewer_attestation_is_accepted_and_verifiable(tmp_p
     assert entry["actor"] == "security-reviewer"
     assert entry["reviewer_key_id"] == "reviewer-01"
     verified = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
-    assert verified["status"] == "PASS"
+    assert verified["integrity_status"] == "PASS"
+    assert verified["status"] == "INCOMPLETE"
+    assert verified["lifecycle_status"] == "IN_PROGRESS"
     assert verified["findings"][0]["status"] == "PASS"
 
 
@@ -181,7 +183,10 @@ def test_fail_decision_is_preserved_in_signed_attestation(tmp_path):
                          evidence_file="evidence/review.txt", attestation_file=attestation,
                          trusted_reviewers_file=keyring)
     assert result["gates"]["core_policy_review"] == "FAIL"
-    assert verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)["status"] == "PASS"
+    verified = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+    assert verified["integrity_status"] == "PASS"
+    assert verified["lifecycle_status"] == "FAILED"
+    assert verified["status"] == "FAIL"
 
 
 

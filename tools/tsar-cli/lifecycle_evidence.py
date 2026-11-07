@@ -25,49 +25,135 @@ def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def _open_regular_file(path: Path) -> tuple[int, os.stat_result]:
+    """Open a regular file without following a final-component symlink."""
+    parent = path.parent.resolve(strict=True)
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if os.name == "posix" and os.open in os.supports_dir_fd:
+        dir_fd = os.open(parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | nofollow)
+        try:
+            fd = os.open(path.name, flags | nofollow, dir_fd=dir_fd)
+        finally:
+            os.close(dir_fd)
+    else:
+        if path.is_symlink():
+            raise LifecycleEvidenceError("symlink files are not accepted")
+        fd = os.open(parent / path.name, flags | nofollow)
+    info = os.fstat(fd)
+    if not stat.S_ISREG(info.st_mode):
+        os.close(fd)
+        raise LifecycleEvidenceError("expected a regular file")
+    return fd, info
+
+
+def _read_regular_file(path: Path) -> tuple[bytes, os.stat_result]:
+    fd, info = _open_regular_file(path)
+    try:
+        chunks = []
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks), info
+    finally:
+        os.close(fd)
+
+
+def _open_project_file(root: Path, parts: tuple[str, ...]) -> int:
+    """Walk from a pinned project-root descriptor; reject symlinks at every component."""
+    if os.name != "posix" or os.open not in os.supports_dir_fd:
+        current = root
+        for part in parts:
+            current = current / part
+            if current.is_symlink():
+                raise LifecycleEvidenceError("symlinks are not accepted in project evidence paths")
+        fd = os.open(current, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            os.close(fd)
+            raise LifecycleEvidenceError("evidence must be a regular file inside the project root")
+        return fd
+
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    current_fd = os.open(root, directory_flags)
+    try:
+        for part in parts[:-1]:
+            next_fd = os.open(part, directory_flags, dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = next_fd
+        file_fd = os.open(
+            parts[-1],
+            os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
+            dir_fd=current_fd,
+        )
+    finally:
+        os.close(current_fd)
+    if not stat.S_ISREG(os.fstat(file_fd).st_mode):
+        os.close(file_fd)
+        raise LifecycleEvidenceError("evidence must be a regular file inside the project root")
+    return file_fd
+
+
 def _safe_relative_file(root: Path, supplied: str) -> tuple[Path, str, int]:
     if not isinstance(supplied, str) or not supplied:
         raise LifecycleEvidenceError("file path must be a non-empty relative path")
     candidate = Path(supplied)
     if candidate.is_absolute() or any(part in {"", ".", ".."} for part in candidate.parts):
         raise LifecycleEvidenceError("file path must be a safe relative path")
-    current = root
-    for part in candidate.parts:
-        current = current / part
-        if current.is_symlink():
-            raise LifecycleEvidenceError("symlinks are not accepted in evidence paths")
-    resolved = current.resolve(strict=True)
-    if not resolved.is_relative_to(root) or not resolved.is_file():
-        raise LifecycleEvidenceError("evidence must be a regular file inside the project root")
+    parts = candidate.parts
+    if not parts:
+        raise LifecycleEvidenceError("file path must identify a regular file")
+    fd = _open_project_file(root, parts)
     digest, size = hashlib.sha256(), 0
-    with resolved.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+    try:
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
             digest.update(chunk)
             size += len(chunk)
+    finally:
+        os.close(fd)
     if not size:
         raise LifecycleEvidenceError("empty evidence files are not accepted")
-    return resolved, digest.hexdigest(), size
+    return root.joinpath(*parts), digest.hexdigest(), size
+
+
+def _audit_context_digest(record: dict) -> str:
+    """Bind every immutable run field and the exact gate set, excluding mutable gate decisions."""
+    immutable = {
+        key: value for key, value in record.items()
+        if key not in {"gates", "evidence", "updated_at"}
+    }
+    gate_names = sorted(record.get("gates", {}))
+    return _sha256_bytes(_canonical({"immutable": immutable, "gate_names": gate_names}))
 
 
 def _load_audit(audit_file: Path, root: Path) -> tuple[Path, dict, bytes]:
     raw = Path(audit_file).expanduser()
-    if raw.is_symlink():
-        raise LifecycleEvidenceError("audit symlinks are not accepted")
+    if not raw.is_absolute():
+        raw = Path.cwd() / raw
     try:
-        audit = raw.resolve(strict=True)
+        parent = raw.parent.resolve(strict=True)
     except OSError as exc:
-        raise LifecycleEvidenceError(f"cannot resolve lifecycle audit file: {exc}") from exc
-    if not audit.is_file() or not audit.is_relative_to(root):
-        raise LifecycleEvidenceError("audit file must be a regular file inside the project root")
+        raise LifecycleEvidenceError(f"cannot resolve lifecycle audit directory: {exc}") from exc
+    audit = parent / raw.name
+    if not parent.is_relative_to(root):
+        raise LifecycleEvidenceError("audit file must be inside the project root")
     try:
-        raw_bytes = audit.read_bytes()
+        raw_bytes, _ = _read_regular_file(audit)
         record = json.loads(raw_bytes)
     except (OSError, json.JSONDecodeError) as exc:
         raise LifecycleEvidenceError(f"cannot read lifecycle audit record: {exc}") from exc
     if not isinstance(record, dict) or record.get("schema") != "tsar/lifecycle-run/v1":
         raise LifecycleEvidenceError("unsupported lifecycle audit schema")
-    if not isinstance(record.get("gates"), dict):
-        raise LifecycleEvidenceError("audit gates must be an object")
+    if not isinstance(record.get("gates"), dict) or not record["gates"]:
+        raise LifecycleEvidenceError("audit gates must be a non-empty object")
+    if record["gates"].get("upstream_preflight") != "PASS":
+        raise LifecycleEvidenceError("upstream_preflight must remain PASS")
+    if any(state not in {"PENDING", "PASS", "FAIL"} for state in record["gates"].values()):
+        raise LifecycleEvidenceError("audit contains an invalid lifecycle gate state")
     if not isinstance(record.get("evidence", []), list):
         raise LifecycleEvidenceError("audit evidence collection must be a list")
     return audit, record, raw_bytes
@@ -75,18 +161,20 @@ def _load_audit(audit_file: Path, root: Path) -> tuple[Path, dict, bytes]:
 
 def _load_keyring(keyring_file: Path, root: Path) -> dict[str, dict]:
     raw = Path(keyring_file).expanduser()
-    if raw.is_symlink():
-        raise LifecycleEvidenceError("trusted reviewer keyring symlinks are not accepted")
+    if not raw.is_absolute():
+        raw = Path.cwd() / raw
     try:
-        keyring_path = raw.resolve(strict=True)
+        parent = raw.parent.resolve(strict=True)
     except OSError as exc:
-        raise LifecycleEvidenceError(f"cannot resolve trusted reviewer keyring: {exc}") from exc
-    if not keyring_path.is_file() or keyring_path.is_relative_to(root):
-        raise LifecycleEvidenceError("trusted reviewer keyring must be a regular file outside the project root")
-    if os.name == "posix" and keyring_path.stat().st_mode & (stat.S_IWGRP | stat.S_IWOTH):
-        raise LifecycleEvidenceError("trusted reviewer keyring must not be group- or world-writable")
+        raise LifecycleEvidenceError(f"cannot resolve trusted reviewer keyring directory: {exc}") from exc
+    keyring_path = parent / raw.name
+    if parent.is_relative_to(root):
+        raise LifecycleEvidenceError("trusted reviewer keyring must be outside the project root")
     try:
-        data = json.loads(keyring_path.read_text(encoding="utf-8"))
+        keyring_bytes, keyring_info = _read_regular_file(keyring_path)
+        if os.name == "posix" and keyring_info.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+            raise LifecycleEvidenceError("trusted reviewer keyring must not be group- or world-writable")
+        data = json.loads(keyring_bytes)
     except (OSError, json.JSONDecodeError) as exc:
         raise LifecycleEvidenceError(f"cannot read trusted reviewer keyring: {exc}") from exc
     if not isinstance(data, dict) or data.get("schema") != "tsar/trusted-reviewers/v1":
@@ -156,7 +244,8 @@ def build_attestation_payload(audit_file: Path, *, repo_root: Path, gate: str,
     return {
         "schema": "tsar/reviewer-attestation-payload/v1",
         "audit_path": audit.relative_to(root).as_posix(),
-        "audit_sha256": _sha256_bytes(audit_bytes),
+        "audit_binding": "tsar/lifecycle-context/v1",
+        "audit_sha256": _audit_context_digest(record),
         "upstream_commit_sha": provenance.get("upstream_commit_sha"),
         "gate": gate,
         "decision": decision,
@@ -187,9 +276,11 @@ def attest_gate(audit_file: Path, *, repo_root: Path, gate: str, evidence_file: 
     audit, record, audit_bytes = _load_audit(audit_file, root)
     try:
         raw_attestation = Path(attestation_file).expanduser()
-        if raw_attestation.is_symlink() or not raw_attestation.resolve(strict=True).is_file():
-            raise LifecycleEvidenceError("reviewer attestation must be a regular non-symlink file")
-        envelope = json.loads(raw_attestation.read_text(encoding="utf-8"))
+        if not raw_attestation.is_absolute():
+            raw_attestation = Path.cwd() / raw_attestation
+        attestation_parent = raw_attestation.parent.resolve(strict=True)
+        attestation_bytes, _ = _read_regular_file(attestation_parent / raw_attestation.name)
+        envelope = json.loads(attestation_bytes)
     except (OSError, json.JSONDecodeError) as exc:
         raise LifecycleEvidenceError(f"cannot read reviewer attestation: {exc}") from exc
     if not isinstance(envelope, dict) or envelope.get("schema") != "tsar/reviewer-attestation/v1":
@@ -302,16 +393,18 @@ def verify_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
             expected_fields = {
                 "schema": "tsar/reviewer-attestation-payload/v1",
                 "audit_path": audit.relative_to(root).as_posix(),
-                "audit_sha256": payload.get("audit_sha256"),
+                "audit_binding": "tsar/lifecycle-context/v1",
+                "audit_sha256": _audit_context_digest(record),
                 "gate": gate, "decision": entry["decision"], "actor": key["actor"],
                 "key_id": key_id, "evidence_path": entry["path"],
                 "evidence_sha256": digest, "evidence_size_bytes": size,
                 "upstream_commit_sha": provenance.get("upstream_commit_sha"),
                 "issued_at": entry.get("recorded_at"),
             }
-            if (not isinstance(payload.get("audit_sha256"), str) or len(payload["audit_sha256"]) != 64
-                    or any(ch not in "0123456789abcdef" for ch in payload["audit_sha256"])):
-                raise LifecycleEvidenceError("signed audit snapshot digest is invalid")
+            if payload.get("audit_binding") != "tsar/lifecycle-context/v1":
+                raise LifecycleEvidenceError("unsupported or missing lifecycle audit binding")
+            if payload.get("audit_sha256") != _audit_context_digest(record):
+                raise LifecycleEvidenceError("signed lifecycle context digest does not match current audit record")
             try:
                 issued = datetime.fromisoformat(str(payload.get("issued_at", "")).replace("Z", "+00:00"))
                 if issued.tzinfo is None or issued > datetime.now(timezone.utc) + timedelta(minutes=5):
@@ -332,11 +425,26 @@ def verify_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
     for gate, state in record["gates"].items():
         if gate != "upstream_preflight" and state in {"PASS", "FAIL"} and gate not in seen:
             findings.append({"gate": gate, "status": "INVALID", "reason": "gate has a decision but no evidence entry"})
-    valid = all(item["status"] == "PASS" for item in findings)
+    integrity_valid = all(item["status"] == "PASS" for item in findings)
+    gate_states = [state for gate, state in record["gates"].items() if gate != "upstream_preflight"]
+    if any(state == "FAIL" for state in gate_states):
+        lifecycle_status = "FAILED"
+    elif any(state == "PENDING" for state in gate_states):
+        lifecycle_status = "IN_PROGRESS"
+    else:
+        lifecycle_status = "COMPLETE"
+    if not integrity_valid or lifecycle_status == "FAILED":
+        overall_status = "FAIL"
+    elif lifecycle_status == "IN_PROGRESS":
+        overall_status = "INCOMPLETE"
+    else:
+        overall_status = "PASS"
     return {
-        "schema": "tsar/lifecycle-audit-verification/v2",
+        "schema": "tsar/lifecycle-audit-verification/v3",
         "audit_file": audit.relative_to(root).as_posix(),
-        "status": "PASS" if valid else "FAIL",
+        "status": overall_status,
+        "integrity_status": "PASS" if integrity_valid else "FAIL",
+        "lifecycle_status": lifecycle_status,
         "evidence_count": len(entries),
         "findings": findings,
         "limitations": [
