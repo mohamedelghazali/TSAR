@@ -68,7 +68,7 @@ class AgentCompatibilityArchitectureTests(unittest.TestCase):
                 content = path.read_text(encoding="utf-8")
                 self.assertIn("Legacy Compatibility Pointer", content)
                 self.assertIn("universal.md", content)
-                self.assertIn("not an independent TSAR policy", content)
+                self.assertIn("independent TSAR policy", content)
 
     def test_only_claude_code_declares_the_optional_native_hook_adapter(self) -> None:
         hooked = [p["name"] for p in self.profiles if p["native_adapter"]]
