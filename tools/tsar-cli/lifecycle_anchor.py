@@ -347,7 +347,7 @@ def verify_external_anchor(audit_file: Path, *, repo_root: Path, trusted_reviewe
     token = os.environ.get(token_env, "")
     if not token:
         raise LifecycleAnchorError(f"required bearer token environment variable is unset: {token_env}")
-    record_before, raw_before = _load_audit(Path(audit_file), root)
+    _, raw_before = _load_audit(Path(audit_file), root)
     try:
         audit_result = verify_audit(
             Path(audit_file), repo_root=root, trusted_reviewers_file=Path(trusted_reviewers_file)
