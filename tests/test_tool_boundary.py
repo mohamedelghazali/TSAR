@@ -82,8 +82,7 @@ def test_unknown_or_out_of_scope_actions_are_denied(changes, reason):
     with pytest.raises(ToolBoundaryError, match=reason):
         boundary.dispatch(request(**changes), lambda args: called.append(args))
     assert called == []
-    if changes.get("actor") != "attacker":
-        assert events[-1]["decision"] == "DENY"
+    assert events[-1]["decision"] == "DENY"
 
 
 def test_missing_scope_denies_action():
