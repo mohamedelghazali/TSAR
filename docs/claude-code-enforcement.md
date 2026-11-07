@@ -51,8 +51,18 @@ This restriction avoids treating arbitrary shell commands, external network acce
 ## Required Claude Code version and file mentions
 
 - Require Claude Code **v2.1.295 or later** so command-hook `onFailure: "block"` is supported. Without this, a missing or timed-out hook may fail open.
-- Claude Code **v2.1.299 or later** supports `CLAUDE_CODE_DISABLE_FILE_MENTIONS=1`. Set this in the user's or administrator's settings/environment, not only in the project settings file: project settings do not apply this environment variable. This disables the `@file` path that can bypass `PreToolUse` Read hooks.
-- Confirm hooks are active with Claude Code's `/hooks` and `/status` commands. Run a controlled negative test before using the profile on a real project.
+- Claude Code **v2.1.299 or later** supports `CLAUDE_CODE_DISABLE_FILE_MENTIONS=1`. Set this in the user's or administrator's settings/environment, not only in the project settings file: project settings do not apply this environment variable. The TSAR hook checks that the variable is present and equal to `1` before allowing prompts or tools. This disables the `@file` path that can bypass `PreToolUse` Read hooks.
+- Example user-level setting in `~/.claude/settings.json` (merge with existing settings):
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_DISABLE_FILE_MENTIONS": "1"
+  }
+}
+```
+
+Confirm hooks are active with Claude Code's `/hooks` and `/status` commands. Run a controlled negative test before using the profile on a real project.
 
 ## Conformance tests
 
