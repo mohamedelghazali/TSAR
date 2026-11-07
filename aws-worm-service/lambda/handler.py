@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import uuid
@@ -24,6 +25,8 @@ ddb = boto3.client("dynamodb")
 kms = boto3.client("kms")
 secrets = boto3.client("secretsmanager")
 _serializer = TypeSerializer()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 BUCKET = os.environ["ANCHOR_BUCKET"]
 TABLE = os.environ["ANCHOR_TABLE"]
@@ -303,6 +306,12 @@ def lambda_handler(event, context):
         return response(404, {"error": "not found"})
     except (ValueError, json.JSONDecodeError) as exc:
         return response(409 if "stale" in str(exc) or "concurrent" in str(exc) else 400, {"error": str(exc)})
-    except Exception:
-        # Do not leak AWS exception details, credentials, or internal identifiers.
+    except Exception as exc:
+        # Log only a sanitized error class and request ID; never log request bodies,
+        # bearer tokens, evidence contents, or AWS exception text.
+        logger.error(
+            "internal service error request_id=%s error_type=%s",
+            getattr(context, "aws_request_id", "unknown"),
+            type(exc).__name__,
+        )
         return response(500, {"error": "internal service error"})
