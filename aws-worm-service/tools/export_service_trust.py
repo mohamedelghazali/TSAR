@@ -33,6 +33,9 @@ def main():
         "public_key": base64.b64encode(raw_key).decode("ascii"),
     }
     destination = args.output.expanduser()
+    repository_root = Path(__file__).resolve().parents[2]
+    if destination.resolve(strict=False).is_relative_to(repository_root):
+        raise SystemExit("trust file must be written outside the TSAR repository")
     if not destination.parent.is_dir():
         raise SystemExit("output parent directory must already exist and be protected")
     if os.name == "posix" and destination.parent.stat().st_mode & (stat.S_IWGRP | stat.S_IWOTH):
