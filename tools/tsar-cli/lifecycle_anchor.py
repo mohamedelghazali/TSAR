@@ -181,7 +181,7 @@ def _verify_receipt(receipt: dict, *, service_id: str, public_key: Ed25519Public
         public_key.verify(signature, _canonical(signed))
     except (AttributeError, TypeError, ValueError, InvalidSignature) as exc:
         raise LifecycleAnchorError("external anchor receipt signature or retention timestamps are invalid") from exc
-    return signed
+    return receipt
 
 
 def _verified_latest(endpoint: str, *, token: str, timeout: int, service_id: str,
