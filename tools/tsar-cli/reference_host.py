@@ -165,8 +165,12 @@ class ReferenceHost:
         policy_fetcher: Callable[[str], bytes] = _default_fetcher,
     ) -> None:
         self.root = Path(repo_root).expanduser().resolve(strict=True)
-        if not tool_registry or set(tool_registry) != set(dispatchers):
-            raise ReferenceHostError("Every registered tool must have exactly one trusted host dispatcher")
+        if (
+            not tool_registry
+            or set(tool_registry) != set(dispatchers)
+            or any(key != spec.name for key, spec in tool_registry.items())
+        ):
+            raise ReferenceHostError("Every registered tool must have one matching trusted dispatcher and ToolSpec name")
         if not callable(audit_sink) or not callable(approval_verifier):
             raise ReferenceHostError("Approval verification and durable audit sink are required")
         self.authorization = authorization
