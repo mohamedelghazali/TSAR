@@ -58,7 +58,8 @@ def event(tmp_path, name="PreToolUse", **extra):
 def setup_env(monkeypatch, tmp_path, scopes="repo:read,repo:write"):
     monkeypatch.setenv("TSAR_CLAUDE_DOMAINS", "development")
     monkeypatch.setenv("TSAR_CLAUDE_SCOPES", scopes)
-    monkeypatch.setenv("TSAR_CLAUDE_AUDIT_DIR", str(tmp_path / "private-audit"))\n    monkeypatch.setenv("CLAUDE_CODE_DISABLE_FILE_MENTIONS", "1")
+    monkeypatch.setenv("TSAR_CLAUDE_AUDIT_DIR", str(tmp_path / "private-audit"))
+    monkeypatch.setenv("CLAUDE_CODE_DISABLE_FILE_MENTIONS", "1")
 
 
 def prime_session(tmp_path, monkeypatch):
