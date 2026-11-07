@@ -136,8 +136,11 @@ from pathlib import Path
 patterns = re.compile(r"(AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|-----BEGIN (RSA |EC )?PRIVATE KEY-----)")
 bad = []
 for f in Path(".").rglob("*"):
-    if not f.is_file() or ".git" in f.parts or "__pycache__" in f.parts or f.suffix == ".pyc":
+    if (not f.is_file() or ".git" in f.parts or ".terraform" in f.parts
+            or "__pycache__" in f.parts or f.suffix == ".pyc"):
         continue
+    # Terraform provider binaries are generated, gitignored artifacts, not repository source.
+    # The checked-in multi-platform lockfile remains scanned as text.
     if "DO_NOT_GENERATE" in str(f) or "anti-patterns" in str(f):
         continue
     try:
