@@ -181,6 +181,24 @@ jobs:
           TSAR_WORM_RETENTION_DAYS: ${{ inputs.retention_days }}
           GITHUB_SHA: ${{ github.sha }}
         run: python aws-worm-service/tools/live_smoke_test.py
+      - name: Export service trust file for TSAR clients
+        if: ${{ inputs.mode == 'apply' }}
+        env:
+          KMS_KEY_ARN: ${{ steps.outputs.outputs.signing_key_arn }}
+        run: >-
+          python aws-worm-service/tools/export_service_trust.py
+          --key-id "$KMS_KEY_ARN"
+          --service-id tsar-worm-service
+          --region "$AWS_REGION"
+          --output "$RUNNER_TEMP/tsar-worm-service-trust.json"
+      - name: Publish service trust file as a workflow artifact
+        if: ${{ inputs.mode == 'apply' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tsar-worm-service-trust
+          path: ${{ runner.temp }}/tsar-worm-service-trust.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Verify deployed S3 protections
         if: ${{ inputs.mode == 'apply' }}
         shell: bash
