@@ -157,6 +157,42 @@ def cmd_lifecycle_verify(args) -> int:
     # Exit 0 only when evidence integrity is valid and every lifecycle gate is complete.
     return 0 if result["status"] == "PASS" else 1
 
+def cmd_lifecycle_anchor(args) -> int:
+    """Append a verified lifecycle snapshot to the external WORM anchor service."""
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_anchor import LifecycleAnchorError, anchor_audit
+    try:
+        result = anchor_audit(
+            Path(args.audit_file), repo_root=ROOT,
+            trusted_reviewers_file=Path(args.trusted_reviewers),
+            endpoint=args.endpoint, service_trust_file=Path(args.service_trust),
+            receipt_file=Path(args.receipt) if args.receipt else None,
+            timeout=args.timeout,
+        )
+    except LifecycleAnchorError as exc:
+        print(f"External lifecycle anchor REJECTED: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_lifecycle_anchor_verify(args) -> int:
+    """Verify the latest external WORM anchor against the current lifecycle audit."""
+    sys.path.insert(0, str(TOOLS / "tsar-cli"))
+    from lifecycle_anchor import LifecycleAnchorError, verify_external_anchor
+    try:
+        result = verify_external_anchor(
+            Path(args.audit_file), repo_root=ROOT,
+            trusted_reviewers_file=Path(args.trusted_reviewers),
+            endpoint=args.endpoint, service_trust_file=Path(args.service_trust),
+            timeout=args.timeout,
+        )
+    except LifecycleAnchorError as exc:
+        print(f"External lifecycle anchor verification FAIL: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
 
 def cmd_verify_upstream(args) -> int:
     """Verify the authoritative upstream snapshot before security-sensitive work."""
@@ -471,6 +507,23 @@ def main() -> int:
     lv.add_argument("--audit-file", required=True, help="Lifecycle audit JSON path")
     lv.add_argument("--trusted-reviewers", required=True, help="External trusted reviewer keyring JSON")
     lv.set_defaults(func=cmd_lifecycle_verify)
+
+    la = sub.add_parser("lifecycle-anchor", help="Append a verified lifecycle snapshot to external WORM storage")
+    la.add_argument("--audit-file", required=True)
+    la.add_argument("--trusted-reviewers", required=True)
+    la.add_argument("--endpoint", required=True, help="HTTPS base URL of the external anchor service")
+    la.add_argument("--service-trust", required=True, help="External service Ed25519 trust file outside the repository")
+    la.add_argument("--receipt", help="Create-only local receipt copy")
+    la.add_argument("--timeout", type=int, default=20)
+    la.set_defaults(func=cmd_lifecycle_anchor)
+
+    lav = sub.add_parser("lifecycle-anchor-verify", help="Verify the latest external WORM anchor")
+    lav.add_argument("--audit-file", required=True)
+    lav.add_argument("--trusted-reviewers", required=True)
+    lav.add_argument("--endpoint", required=True)
+    lav.add_argument("--service-trust", required=True)
+    lav.add_argument("--timeout", type=int, default=20)
+    lav.set_defaults(func=cmd_lifecycle_anchor_verify)
 
     u = sub.add_parser("verify-upstream")
     u.add_argument("--domain", action="append", default=[],

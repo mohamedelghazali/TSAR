@@ -73,3 +73,41 @@ Legacy attestations without the lifecycle-context binding are intentionally repo
 ## Lifecycle planning boundaries
 
 `lifecycle-plan` is a deterministic planning aid. Keyword classification can miss context or select extra domains; operators must confirm the applicable domains and impact before implementation. A plan is not a security approval, does not execute scanners, and does not mark gates as passed. High-impact tasks require the listed additional review gates.
+
+## External WORM audit anchoring
+
+TSAR can submit a locally verified lifecycle audit snapshot to an independently administered HTTPS anchor service. The client accepts only a signed receipt from a separately pinned Ed25519 service key and requires the receipt to attest `WORM_COMPLIANCE` retention with a future `retain_until` timestamp. The service must enforce create-only append semantics, atomic compare-and-append using `expected_previous_anchor_sha256`, durable retention, and an authenticated latest-record lookup. A signed receipt is not, by itself, proof that the service's storage configuration is genuinely immutable; independently audit the service and its storage policy.
+
+### Trust and credentials
+
+Keep the service trust file outside the repository and restrict write permissions (POSIX mode 0600 or stricter). It has this format:
+
+```json
+{
+  "schema": "tsar/audit-anchor-trust/v1",
+  "service_id": "company-worm-vault-prod",
+  "public_key": "BASE64_RAW_32_BYTE_ED25519_SERVICE_PUBLIC_KEY"
+}
+```
+
+Set the bearer token in the environment variable `TSAR_AUDIT_ANCHOR_TOKEN`; never put it in command-line arguments, audit files, or source control. The service public key must be obtained and verified through an independent administrative channel.
+
+### Commands
+
+```bash
+# Append the current verified snapshot; the receipt file is create-only.
+tsar lifecycle-anchor --audit-file .tsar/runs/run.json --trusted-reviewers C:/secure/tsar/trusted-reviewers.json --endpoint https://worm.example --service-trust C:/secure/tsar/anchor-service.json --receipt .tsar/receipts/run-anchor.json
+
+# Verify that the remote latest anchor matches the current local audit bytes.
+tsar lifecycle-anchor-verify --audit-file .tsar/runs/run.json --trusted-reviewers C:/secure/tsar/trusted-reviewers.json --endpoint https://worm.example --service-trust C:/secure/tsar/anchor-service.json
+```
+
+### Required service API contract
+
+- `GET /v1/runs/{run_id}/latest`: return HTTP 200 with `{"receipt": ...}`, or HTTP 404 when no anchor exists.
+- `POST /v1/anchors`: atomically append the request and return HTTP 201 with `{"receipt": ...}`. Reject a stale `expected_previous_anchor_sha256`; enforce the idempotency key; never overwrite or delete prior records.
+- The signed receipt schema is `tsar/external-audit-anchor-receipt/v1`. Its Ed25519 signature covers every receipt field except `signature`. Required fields: `service_id`, `anchor_id`, `run_id`, positive `sequence`, `record_sha256`, `previous_anchor_sha256`, timezone-aware `anchored_at`, `retention_mode` equal to `WORM_COMPLIANCE`, and future timezone-aware `retain_until`.
+- The service must store every append in independently administered WORM/COMPLIANCE storage with retention lock, preserve all versions, and prevent privileged deletion during retention. It must not merely echo the requested retention mode.
+- Protect transport with TLS, authenticate clients, rotate credentials, monitor retention-policy drift, and retain service signing keys in a separate KMS/HSM or equivalent trust boundary.
+
+The anchor client refuses incomplete or invalid evidence integrity, rejects redirects, refuses non-HTTPS endpoints, verifies the service signature and retention claim, and detects stale/missing latest snapshots. The local receipt is a convenience copy, not the authoritative archive. No external service is provisioned by TSAR itself; anchoring is operational only after an independently administered service implementing this contract is deployed and configured. A compromised service signing key or dishonest service administrator remains a trust-boundary risk.
