@@ -1,6 +1,6 @@
 {
   "name": "tsar-web",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "TSAR security posture dashboard",
   "private": true,
   "scripts": {"dev":"next dev","build":"next build","start":"next start"},
