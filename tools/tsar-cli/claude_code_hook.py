@@ -267,29 +267,38 @@ def _safe_resource(
         resolved = candidate.resolve(strict=False)
     except OSError as exc:
         raise ClaudeHookError("Tool path cannot be resolved safely") from exc
+    policy_files = state.get("required_policy_files", {})
+    if tool_name == "Read" and str(resolved) in policy_files:
+        policy_root = Path(state["policy_cache_root"])
+        try:
+            policy_relative = resolved.relative_to(policy_root)
+        except ValueError as exc:
+            raise ClaudeHookError("Policy file is outside the verified TSAR cache") from exc
+        return "tsar-policy:" + policy_relative.as_posix()
     if tool_name == "Glob":
         pattern = tool_input.get("pattern")
         normalized_pattern = pattern.replace(chr(92), "/") if isinstance(pattern, str) else ""
-        if not normalized_pattern or normalized_pattern.startswith("/") or any(
-            part == ".." for part in normalized_pattern.split("/")
+        if (
+            not normalized_pattern
+            or normalized_pattern.startswith("/")
+            or re.match(r"^[A-Za-z]:/", normalized_pattern)
+            or any(part == ".." for part in normalized_pattern.split("/"))
         ):
             raise ClaudeHookError("Glob pattern must not traverse outside the project root")
-    policy_files = state.get("required_policy_files", {})
-    if tool_name == "Read" and str(resolved) in policy_files:
-        return "tsar-policy:" + Path(str(resolved)).relative_to(
-            Path(state["policy_cache_root"])
-        ).as_posix()
     try:
-        relative = resolved.relative_to(repo_root)
+        lexical_relative = candidate.absolute().relative_to(repo_root)
     except ValueError as exc:
         raise ClaudeHookError("Tool path escapes the trusted project root") from exc
     current = repo_root
-    for part in relative.parts:
+    for part in lexical_relative.parts:
         current = current / part
         if current.is_symlink():
             raise ClaudeHookError("Symlink paths are not accepted by the TSAR Claude hook")
+    try:
+        relative = resolved.relative_to(repo_root)
+    except ValueError as exc:
+        raise ClaudeHookError("Tool path resolves outside the trusted project root") from exc
     return "project:" + (relative.as_posix() if relative.parts else ".")
-
 
 def _audit_file(repo_root: Path, session_id: str) -> Path:
     identity = hashlib.sha256(str(repo_root).encode("utf-8")).hexdigest()[:24]
