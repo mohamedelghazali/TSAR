@@ -109,6 +109,11 @@ An adapter claiming E2 or higher MUST provide automated tests demonstrating:
 
 A conformance test suite must test the adapter's real invocation path. Unit tests of a helper function alone do not establish that the host agent actually calls the adapter.
 
+
+### Output verification and evidence API
+
+The `tools/tsar-cli/output_verification.py` module provides a fail-closed E4 building block. It hashes actual changed files, binds observed check results to immutable TSAR and manifest provenance, records skipped/missing/failed checks, and refuses acceptance unless every trusted required check is PASS. Its JSON digest detects record modification but is not a signature or tamper-proof attestation. E4 is not claimed for an agent integration until the host invokes this gate for every covered change, obtains checks from real processes, protects required-check configuration and evidence storage, blocks bypasses, and passes host-level conformance tests.
+
 ## Compatibility reporting
 
 Every supported-agent entry must state:
