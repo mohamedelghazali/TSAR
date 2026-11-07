@@ -114,6 +114,11 @@ A conformance test suite must test the adapter's real invocation path. Unit test
 
 The `tools/tsar-cli/output_verification.py` module provides a fail-closed E4 building block. It hashes actual changed files, binds observed check results to immutable TSAR and manifest provenance, records skipped/missing/failed checks, and refuses acceptance unless every trusted required check is PASS. Its JSON digest detects record modification but is not a signature or tamper-proof attestation. E4 is not claimed for an agent integration until the host invokes this gate for every covered change, obtains checks from real processes, protects required-check configuration and evidence storage, blocks bypasses, and passes host-level conformance tests.
 
+
+### E5 output-verification attestation integration
+
+Every lifecycle task plan includes an `output_verification` gate. Before an authorized reviewer can sign this gate, TSAR validates the referenced E4 evidence schema and digest, requires a PASS decision, and confirms every mandatory check is PASS with exit code 0 and no missing or failed checks. The Ed25519 reviewer attestation then binds the exact evidence file hash, lifecycle context, upstream commit, reviewer identity, gate decision and timestamp. The reviewer private key remains external. See [E5 Output Attestation](e5-output-attestation.md). This integration covers the controlled lifecycle CLI/audit path; it does not automatically intercept every provider or host write path.
+
 ## Compatibility reporting
 
 Every supported-agent entry must state:
