@@ -257,6 +257,7 @@ def anchor_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
             "repository": repository,
             "run_id": run_id,
             "record_sha256": record_digest,
+            "audit_snapshot_b64": base64.b64encode(raw_audit).decode("ascii"),
             "integrity_status": audit_result.get("integrity_status"),
             "lifecycle_status": audit_result.get("lifecycle_status"),
             "gate_states": record.get("gates"),
