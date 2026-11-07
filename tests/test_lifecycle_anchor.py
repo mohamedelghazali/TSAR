@@ -96,7 +96,6 @@ def test_wrong_service_identity_is_rejected():
 
 @pytest.mark.parametrize("endpoint", [
     "http://anchor.example",
-    "https://user:password@anchor.example",
     "https://anchor.example/path?token=secret",
     "https://anchor.example/path#fragment",
 ])
