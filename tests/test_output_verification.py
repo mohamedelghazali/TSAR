@@ -88,3 +88,13 @@ def test_tampered_evidence_fails_integrity_check(tmp_path):
     record = gate().evaluate(changed_files=[changed], checks=[check()], required_checks=["secret-scan"])
     record["decision"] = "BLOCKED"
     assert not OutputGate.verify_record(record)
+
+
+def test_e6_host_conformance_level_is_valid_provenance():
+    instance = OutputGate(
+        task_id="task-e6", agent="host-agent", adapter_version="1.0.0",
+        tsar_commit_sha=SHA, manifest_version="1.2.0",
+        manifest_sha256=HASH, policy_hashes={"CORE_DIRECTIVE.md": HASH},
+        domains=["development"], enforcement_level="E6",
+    )
+    assert instance.provenance["enforcement_level"] == "E6"
