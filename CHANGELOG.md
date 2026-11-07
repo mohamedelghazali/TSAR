@@ -6,6 +6,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.2.0] — Unreleased
+
+### Added
+- AWS Lambda external audit-anchor service with S3 Object Lock COMPLIANCE retention, DynamoDB transactional sequencing/idempotency, and AWS KMS Ed25519 receipts.
+- GitHub Actions OIDC deployment workflow with durable Terraform state and authenticated live qualification.
+- Release qualification records separating historical v1.1.1 evidence from the 1.2.0 candidate.
+
+### Changed
+- Updated TSAR component version metadata to 1.2.0 for the next stable release.
+
+
 ## [1.1.1] — 2026-10-31
 
 ### Fixed

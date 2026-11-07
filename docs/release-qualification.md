@@ -28,8 +28,8 @@ The historical inventory and CI evidence are retained as release records, not as
 ## Current Main Snapshot — 2026-11-07
 
 - Branch: `main`
-- Commit: `7c76e8a51029b3d1f5ce979632245b71b0fc4484`
-- Commit subject: `feat(worm): implement AWS S3 Object Lock anchor service (#67)`
+- Commit: `a3c78830e2f2bfa56075e18f11ab74bcedebbd6a`
+- Commit subject: `docs: qualify current main and clarify AWS operations (#68)`
 - Version files remain at `1.1.1` (`VERSION`, `manifest.yaml`, and `tools/tsar-cli/pyproject.toml`).
 - The `v1.1.1` tag does not point to this commit. The current main snapshot is therefore not represented by the published v1.1.1 tag or its historical release qualification.
 
@@ -59,6 +59,23 @@ The ruleset retrieved for this review does **not** contain a required-status-che
 
 A second qualified maintainer's approval is recommended when one is available. No approval requirement is represented as active today.
 
+## Next Stable Release Candidate — 1.2.0
+
+The next stable release candidate is version `1.2.0`. Version metadata is
+updated together across `VERSION`, `manifest.yaml`, the CLI package, the LSP
+package, and the web package. This is a candidate, not a published release.
+
+Acceptance requires full candidate CI, CLI wheel/sdist inspection,
+provenance/SLSA evidence where supported, manifest/version consistency, clean
+installation checks, active required GitHub status checks, and final review of
+release notes, SBOM, licensing/security notices. If the release claims AWS WORM
+is operational, the GitHub OIDC deployment workflow must complete its live
+apply and end-to-end smoke test. Otherwise describe AWS as an implementation
+candidate.
+
+This PR creates no Git tag or GitHub Release. Publish only after all candidate
+checks pass and the release owner approves the exact tag and commit.
+
 ## AWS WORM Service — Implementation vs. Operation
 
 PR #67 added the AWS Lambda anchor service, Terraform infrastructure, KMS Ed25519 signing, S3 Object Lock COMPLIANCE retention, DynamoDB sequencing/idempotency, trust export tooling, and isolated behavioral/contract tests.
@@ -67,12 +84,12 @@ The following boundaries are explicit:
 
 - The service code and infrastructure definitions are present in the repository.
 - CI validates code and infrastructure statically and runs isolated tests.
-- No AWS resources have been deployed by this repository change.
+- No AWS resources had been deployed on the current main baseline. The 1.2.0 candidate adds a GitHub Actions deployment workflow; it must complete a live apply and smoke test before operational status can be claimed.
 - No live AWS integration test has been completed.
 - No AWS credentials, production secrets, or deployed endpoints are included in the repository evidence.
 - S3 and DynamoDB do not share a transaction; a retained orphan S3 object can remain if the DynamoDB transaction fails.
 
-Therefore, the AWS WORM service is an implemented deployment candidate, **not an operational or production-verified service**. Operational qualification requires an owner-approved AWS deployment and live verification of the deployed controls.
+Therefore, the AWS WORM service is an implemented deployment candidate, **not an operational or production-verified service**. Operational qualification requires a successful GitHub Actions OIDC deployment and live verification of authenticated append, KMS Ed25519 receipt signature, durable latest-anchor read, idempotent retry, and S3 Object Lock controls.
 
 ## Staging Scope
 
@@ -85,9 +102,10 @@ A separate Staging environment is **not a required project milestone** for TSAR.
 | Historical v1.1.1 release | Qualified only for its recorded tag and commit |
 | Current main repository CI | Pass on `7c76e8a51029b3d1f5ce979632245b71b0fc4484` |
 | Current main as a new published release | Not qualified as a new release; no new version/tag has been created |
+| 1.2.0 candidate | Qualification in progress; no tag/release created |
 | AWS WORM operational behavior | Not verified; no live deployment |
 | Separate Staging environment | Not required |
 
-Do not move or retarget the historical `v1.1.1` tag. A future release based on current main requires an explicit versioning/release decision and a fresh release qualification tied to the exact release commit.
+Do not move or retarget the historical `v1.1.1` tag. The 1.2.0 candidate requires successful CI and the acceptance evidence above. Do not publish a tag or release until those conditions are met.
 
 This qualification does not certify absence of vulnerabilities, guaranteed agent prompt compliance, regulatory compliance, or live cloud deployment behavior.
