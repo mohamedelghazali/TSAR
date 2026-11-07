@@ -1,5 +1,6 @@
 """Verify Kubernetes and Terraform examples are structurally valid."""
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parent.parent
 K8S = ROOT / "examples" / "secure" / "kubernetes"
@@ -83,7 +84,16 @@ def test_infra_workflow_generates_multi_platform_lockfile():
     lockfile = TF / ".terraform.lock.hcl"
     assert lockfile.is_file()
     lock_text = lockfile.read_text(encoding="utf-8")
-    assert 'version     = "5.40.0"' in lock_text
+    main_tf = (TF / "main.tf").read_text(encoding="utf-8")
+    provider = re.search(
+        r'aws\s*=\s*\{\s*source\s*=\s*"hashicorp/aws"\s*version\s*=\s*"=?\s*(\d+\.\d+\.\d+)"',
+        main_tf,
+        re.DOTALL,
+    )
+    assert provider, "AWS provider version must be explicitly pinned in main.tf"
+    provider_version = provider.group(1)
+    assert f'version     = "{provider_version}"' in lock_text
+    assert f'constraints = "{provider_version}"' in lock_text
     assert len([line for line in lock_text.splitlines() if '"zh:' in line]) >= 10
 
 
