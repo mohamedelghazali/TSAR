@@ -380,7 +380,7 @@ def handle_event(
     session_id = payload.get("session_id")
     if not isinstance(session_id, str) or not session_id:
         raise ClaudeHookError("Claude hook input is missing session_id")
-    domains = tuple(domain for domain in _domains_from_env() if domain != "core")
+    if event in {"UserPromptSubmit", "PreToolUse"} and os.environ.get("CLAUDE_CODE_DISABLE_FILE_MENTIONS") != "1":\n        raise ClaudeHookError("Set CLAUDE_CODE_DISABLE_FILE_MENTIONS=1 in user or managed Claude Code settings to close the @file Read-hook bypass")\n    domains = tuple(domain for domain in _domains_from_env() if domain != "core")
     if not domains:
         raise ClaudeHookError("At least one non-core TSAR policy domain must be selected")
     audit_path = _audit_file(repo_root, session_id)
