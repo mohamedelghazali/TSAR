@@ -43,7 +43,7 @@ MANIFEST = (
 ).encode()
 
 
-def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamper_policy=False, run_real_checks=False):
+def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamper_policy=False, run_real_checks=False, scopes=None, requires_approval=False, approval_allowed=True, audit_failure=False):
     root = tmp_path / "project"
     (root / "tools" / "tsar-cli").mkdir(parents=True)
     (root / "manifest.yaml").write_bytes(MANIFEST)
@@ -86,6 +86,7 @@ def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamp
         operations=frozenset({"write"}),
         resources=frozenset({"repo:demo"}),
         required_scope="repo:write",
+        requires_approval=requires_approval,
     )
     def command(name):
         return (sys.executable, "-c", "print(0)") if run_real_checks else (name, ".")
@@ -93,9 +94,9 @@ def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamp
         repo_root=root,
         tool_registry={"repo.write": spec},
         dispatchers={"repo.write": lambda args: {"written": args["content"]}},
-        authorization=AuthorizationContext("operator-1", frozenset({"repo:write"})),
-        approval_verifier=lambda token, digest, actor: True,
-        audit_sink=events.append,
+        authorization=AuthorizationContext("operator-1", frozenset({"repo:write"} if scopes is None else scopes)),
+        approval_verifier=lambda token, digest, actor: approval_allowed,
+        audit_sink=(lambda event: (_ for _ in ()).throw(OSError("audit unavailable"))) if audit_failure else events.append,
         required_checks=[
             CheckCommand("secret_scan", command("secret-scan"), "secret-scanner", "1.0"),
             CheckCommand("secure_code_review", command("secure-review"), "secure-review", "1.0"),
@@ -255,3 +256,51 @@ def test_host_executes_trusted_checks_as_real_processes(tmp_path):
     )
     assert result.status == "PASS"
     assert all(item["status"] == "PASS" and item["exit_code"] == 0 for item in result.check_results)
+
+
+def test_missing_scope_is_denied_on_the_host_dispatch_path(tmp_path):
+    host, _, events = build_host(tmp_path, scopes=set())
+    def agent(context):
+        context.dispatch_tool("repo.write", "write", "repo:demo", {"content": "x"})
+    with pytest.raises(ReferenceHostError, match="Agent execution failed"):
+        host.run_task(
+            "Implement a secure module", agent,
+            task_id="missing-scope", agent_id="test-agent",
+            audit_file=".tsar/runs/missing-scope.json",
+            output_evidence_file=".tsar/evidence/missing-scope.json",
+            changed_files_provider=lambda: ["app.py"], domains=["development"],
+        )
+    assert events[-1]["reason"] == "missing_authorization_scope"
+
+
+def test_invalid_action_approval_is_denied_on_the_host_path(tmp_path):
+    host, _, events = build_host(tmp_path, requires_approval=True, approval_allowed=False)
+    def agent(context):
+        context.dispatch_tool("repo.write", "write", "repo:demo", {"content": "x"}, approval={"invalid": True})
+    with pytest.raises(ReferenceHostError, match="Agent execution failed"):
+        host.run_task(
+            "Implement a secure module", agent,
+            task_id="invalid-approval", agent_id="test-agent",
+            audit_file=".tsar/runs/invalid-approval.json",
+            output_evidence_file=".tsar/evidence/invalid-approval.json",
+            changed_files_provider=lambda: ["app.py"], domains=["development"],
+        )
+    assert events[-1]["reason"] == "missing_or_invalid_action_bound_approval"
+
+
+def test_audit_sink_failure_blocks_host_tool_execution(tmp_path):
+    host, _, events = build_host(tmp_path, audit_failure=True)
+    dispatched = []
+    host.dispatchers["repo.write"] = lambda args: dispatched.append(args)
+    def agent(context):
+        context.dispatch_tool("repo.write", "write", "repo:demo", {"content": "x"})
+    with pytest.raises(ReferenceHostError, match="Agent execution failed"):
+        host.run_task(
+            "Implement a secure module", agent,
+            task_id="audit-failure", agent_id="test-agent",
+            audit_file=".tsar/runs/audit-failure.json",
+            output_evidence_file=".tsar/evidence/audit-failure.json",
+            changed_files_provider=lambda: ["app.py"], domains=["development"],
+        )
+    assert dispatched == []
+    assert events == []
