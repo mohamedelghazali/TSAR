@@ -46,6 +46,7 @@ The KMS \`Sign\` call uses \`ED25519_SHA_512\` with \`MessageType=RAW\`, matchin
 - DynamoDB is the live index and sequencing authority; S3 Object Lock is the immutable evidence archive. Protect the table, backups, Terraform state, deployment role, and CloudTrail separately.
 - Monitor Object Lock configuration, bucket policy, KMS key state, Secrets Manager rotation, Lambda errors, API throttling, and DynamoDB transaction conflicts.
 - The service currently permits only configured repository names. Review this allowlist before onboarding another repository.
+- The combined decoded audit snapshot and evidence archive is limited to 4 MiB to remain within synchronous Lambda invocation payload constraints.
 - The S3 object and DynamoDB transaction cannot be atomic together. Retained orphan objects after failed transactions are expected and must be monitored/reconciled, never treated as accepted anchors.
 - This implementation is a deployment candidate, not a claim of operational WORM protection. No AWS resources have been deployed or independently audited by this repository change.
 
