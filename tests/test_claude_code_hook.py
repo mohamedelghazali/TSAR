@@ -177,6 +177,7 @@ def test_path_escape_is_rejected_before_boundary_authorization(tmp_path, monkeyp
 def test_audit_symlink_failure_blocks_pre_tool_use(tmp_path, monkeypatch):
     prime_session(tmp_path, monkeypatch)
     audit_path = _audit_file(tmp_path.resolve(), "session-123")
+    audit_path.unlink()
     audit_path.symlink_to(tmp_path / "target.jsonl")
     with pytest.raises(OSError):
         handle_event(
