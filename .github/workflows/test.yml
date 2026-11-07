@@ -39,14 +39,15 @@ jobs:
           assert len(wheels) == 1, f"expected one CLI wheel, found {len(wheels)}"
           with zipfile.ZipFile(wheels[0]) as wheel:
               names = set(wheel.namelist())
-              required = {"lifecycle_anchor.py", "lifecycle_evidence.py", "reference_host.py", "tsar.py"}
+              required = {"lifecycle_anchor.py", "lifecycle_evidence.py", "reference_host.py", "claude_code_hook.py", "tsar.py"}
               missing = required - names
               assert not missing, f"CLI wheel is missing required files: {sorted(missing)}"
               entry_point_files = [name for name in names if name.endswith(".dist-info/entry_points.txt")]
               assert len(entry_point_files) == 1, f"expected one entry_points.txt, found {entry_point_files}"
               entry_points = wheel.read(entry_point_files[0]).decode()
               assert "tsar = tsar:main" in entry_points
-          print("CLI wheel contains lifecycle and reference-host modules and the tsar entry point.")
+              assert "tsar-claude-hook = claude_code_hook:main" in entry_points
+          print("CLI wheel contains lifecycle, reference-host, Claude Code hook modules, and both CLI entry points.")
           PY
 
       - name: Install checksum-verified OPA

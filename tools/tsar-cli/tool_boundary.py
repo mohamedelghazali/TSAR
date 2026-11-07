@@ -90,7 +90,11 @@ def action_digest(request: ActionRequest) -> str:
 
 
 class ToolBoundary:
-    """Dispatch only registered, in-scope actions after policy and audit checks."""
+    """Authorize registered actions independently from dispatching them.
+
+    Hosts with native pre-tool hooks call authorize() before the provider executes
+    the tool, then record_outcome() from the corresponding post-tool event.
+    """
 
     def __init__(
         self,
@@ -113,20 +117,11 @@ class ToolBoundary:
                 "Audit sink failed; dispatch is blocked or its outcome may be unknown"
             ) from exc
 
-    def dispatch(
-        self,
-        request: ActionRequest,
-        dispatcher: Callable[[Mapping[str, Any]], Any],
-    ) -> Any:
+    def authorize(self, request: ActionRequest) -> ActionRequest:
+        """Audit and authorize an action without executing its underlying tool."""
         if not isinstance(request, ActionRequest):
             raise ToolBoundaryError("Invalid action request")
         if request.actor != self._authorization.principal:
-            digest = None
-            if isinstance(request.arguments, Mapping):
-                try:
-                    digest = action_digest(request)
-                except ToolBoundaryError:
-                    pass
             self._audit({
                 "schema": "tsar/tool-boundary-event/v1",
                 "decision": Decision.DENY.value,
@@ -135,13 +130,12 @@ class ToolBoundary:
                 "resource": request.resource,
                 "actor": self._authorization.principal,
                 "claimed_actor": request.actor,
-                "action_sha256": digest,
+                "action_sha256": None,
                 "reason": "actor_mismatch",
             })
             raise ToolBoundaryError("Action actor does not match authenticated principal")
         if not isinstance(request.arguments, Mapping):
             raise ToolBoundaryError("Action arguments must be a mapping")
-        # Snapshot arguments so the dispatched payload matches the approval digest.
         try:
             argument_snapshot = json.loads(json.dumps(
                 request.arguments, sort_keys=True, separators=(",", ":"),
@@ -159,25 +153,25 @@ class ToolBoundary:
         reason = None
         if spec is None:
             reason = "unregistered_tool"
-        elif request.operation not in spec.operations:
+        elif normalized.operation not in spec.operations:
             reason = "operation_not_registered"
-        elif request.resource not in spec.resources:
+        elif normalized.resource not in spec.resources:
             reason = "resource_out_of_scope"
         elif spec.required_scope not in self._authorization.scopes:
             reason = "missing_authorization_scope"
         elif (
             spec.requires_approval or spec.action_class in SENSITIVE_CLASSES
         ) and not self._approval_verifier(
-            request.approval, digest, self._authorization.principal
+            normalized.approval, digest, self._authorization.principal
         ):
             reason = "missing_or_invalid_action_bound_approval"
 
         event = {
             "schema": "tsar/tool-boundary-event/v1",
             "decision": Decision.DENY.value if reason else Decision.ALLOW.value,
-            "tool": request.tool,
-            "operation": request.operation,
-            "resource": request.resource,
+            "tool": normalized.tool,
+            "operation": normalized.operation,
+            "resource": normalized.resource,
             "actor": self._authorization.principal,
             "action_sha256": digest,
             "reason": reason,
@@ -185,11 +179,45 @@ class ToolBoundary:
         self._audit(event)
         if reason:
             raise ToolBoundaryError(f"Tool action denied: {reason}")
+        return normalized
 
+    def record_outcome(
+        self,
+        request: ActionRequest,
+        outcome: str,
+        *,
+        error_type: str | None = None,
+    ) -> None:
+        """Record a provider-side tool outcome after a prior authorization."""
+        if outcome not in {"EXECUTED", "DISPATCH_ERROR"}:
+            raise ToolBoundaryError("Unsupported tool outcome")
+        event = {
+            "schema": "tsar/tool-boundary-event/v1",
+            "decision": Decision.ALLOW.value,
+            "tool": request.tool,
+            "operation": request.operation,
+            "resource": request.resource,
+            "actor": self._authorization.principal,
+            "action_sha256": action_digest(request),
+            "outcome": outcome,
+        }
+        if error_type is not None:
+            event["error_type"] = error_type
+        self._audit(event)
+
+    def dispatch(
+        self,
+        request: ActionRequest,
+        dispatcher: Callable[[Mapping[str, Any]], Any],
+    ) -> Any:
+        """Authorize, dispatch, and record the outcome as one controlled call."""
+        normalized = self.authorize(request)
         try:
             result = dispatcher(normalized.arguments)
         except Exception as exc:
-            self._audit({**event, "outcome": "DISPATCH_ERROR", "error_type": type(exc).__name__})
+            self.record_outcome(
+                normalized, "DISPATCH_ERROR", error_type=type(exc).__name__
+            )
             raise
-        self._audit({**event, "outcome": "EXECUTED"})
+        self.record_outcome(normalized, "EXECUTED")
         return result
