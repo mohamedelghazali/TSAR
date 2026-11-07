@@ -178,8 +178,10 @@ def _append(request):
         parts = PurePosixPath(path).parts if isinstance(path, str) else ()
         if (not path or "\\" in path or PurePosixPath(path).is_absolute()
                 or any(part in {"", ".", ".."} for part in parts)
-                or path in expected_evidence):
-            raise ValueError("audit evidence path is unsafe or duplicated")
+                ):
+            raise ValueError("audit evidence path is unsafe")
+        if path in expected_evidence and expected_evidence[path] != (entry.get("sha256"), entry.get("size_bytes")):
+            raise ValueError("duplicate evidence path has conflicting metadata")
         size = entry.get("size_bytes")
         sha = entry.get("sha256")
         if not isinstance(size, int) or isinstance(size, bool) or size < 1 or not isinstance(sha, str) or not _SHA256.fullmatch(sha):
