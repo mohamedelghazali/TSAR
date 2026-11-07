@@ -32,6 +32,10 @@ TSAR provides 15 agent-specific instruction files. Install the matching file usi
 2. Include the manifest URL if the environment permits retrieval.
 3. For local models, pre-download the rules and include relevant content in the context window.
 
+## Mandatory enforcement contract
+
+For the enforceable integration lifecycle, enforcement levels, adapter requirements, fail-closed behavior, and conformance tests, follow [Mandatory Agent Adoption and Enforcement Contract](mandatory-agent-enforcement.md). Report the actual enforcement level for each integration; never infer runtime enforcement from a prompt or skill being present.
+
 ## Enforcement Model and Limitations
 
 These integrations load instructions; they do not install privileged controls inside the model provider. Prompt compliance is not guaranteed. For reliable repository-level enforcement:
