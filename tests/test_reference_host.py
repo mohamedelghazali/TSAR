@@ -102,10 +102,6 @@ def build_host(tmp_path, *, preflight_status="PASS", check_exit_codes=None, tamp
     return host, root, events
 
 
-@pytest.fixture
-def context_root(tmp_path):
-    return tmp_path / "project"
-
 
 def test_reference_host_completes_controlled_path_and_keeps_reviewer_gate_pending(tmp_path):
     host, root, events = build_host(tmp_path)
