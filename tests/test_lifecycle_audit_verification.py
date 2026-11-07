@@ -172,7 +172,7 @@ def test_audit_context_tampering_invalidates_signed_attestation(tmp_path):
     root, audit, _, keyring, private_key = make_run(tmp_path)
     attest(root, audit, keyring, private_key)
     record = json.loads(audit.read_text(encoding="utf-8"))
-    record["task"] = {"description": "tampered after reviewer approval"}
+    record["task"]["task"] = "tampered after reviewer approval"
     audit.write_text(json.dumps(record), encoding="utf-8")
     result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["integrity_status"] == "FAIL"
@@ -185,6 +185,7 @@ def test_gate_set_tampering_invalidates_signed_attestation(tmp_path):
     attest(root, audit, keyring, private_key)
     record = json.loads(audit.read_text(encoding="utf-8"))
     record["gates"]["release_approval"] = "PENDING"
+    record["task"]["required_gates"].append("release_approval")
     audit.write_text(json.dumps(record), encoding="utf-8")
     result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["integrity_status"] == "FAIL"
