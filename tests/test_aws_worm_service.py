@@ -166,7 +166,7 @@ def test_append_archives_audit_and_evidence_and_returns_kms_ed25519_receipt(serv
 def test_append_rejects_snapshot_digest_mismatch_before_aws_writes(service):
     module, ddb, s3, _, _ = service
     request = make_request(module)
-    request["audit_snapshot_b64"] = base64.b64encode(b\'{"tampered":true}\').decode()
+    request["audit_snapshot_b64"] = base64.b64encode(b"""{"tampered":true}""").decode()
 
     with pytest.raises(ValueError, match="digest"):
         module._append(request)
