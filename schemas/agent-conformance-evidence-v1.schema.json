@@ -55,13 +55,15 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/check"
-      }
+      },
+      "minItems": 1
     },
     "evidence_artifacts": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/artifact"
-      }
+      },
+      "minItems": 1
     },
     "notes": {
       "type": "array",
