@@ -44,7 +44,7 @@ def setup_run(tmp_path):
         "keys": [{
             "key_id": "reviewer-01", "actor": "security-reviewer",
             "public_key": base64.b64encode(public).decode(),
-            "allowed_gates": ["core_policy_review"], "active": True,
+            "allowed_gates": ["core_policy_review", "output_verification"], "active": True,
         }],
     }), encoding="utf-8")
     keyring.chmod(0o600)
