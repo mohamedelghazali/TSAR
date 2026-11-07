@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/mohamedelghazali/TSAR/main/schemas/agent-conformance-evidence-v1.schema.json",
+  "title": "TSAR Agent Runtime Conformance Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "timestamp_utc",
+    "scenario_id",
+    "agent",
+    "tsar",
+    "assurance",
+    "result",
+    "checks",
+    "evidence_artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "tsar/agent-conformance-evidence/v1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scenario_id": {
+      "type": "string",
+      "pattern": "^AC-[0-9]{2}$"
+    },
+    "agent": {
+      "$ref": "#/$defs/agent"
+    },
+    "tsar": {
+      "$ref": "#/$defs/tsar"
+    },
+    "assurance": {
+      "$ref": "#/$defs/assurance"
+    },
+    "result": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED",
+        "NOT_RUN",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/check"
+      },
+      "minItems": 1
+    },
+    "evidence_artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      },
+      "minItems": 1
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2000
+      }
+    }
+  },
+  "$defs": {
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inventory_name",
+        "product",
+        "edition",
+        "model_or_runtime_id",
+        "runtime_version",
+        "integration_mechanism",
+        "access_status"
+      ],
+      "properties": {
+        "inventory_name": {
+          "enum": [
+            "Claude (chat)",
+            "Claude Code",
+            "GPT",
+            "DeepSeek-Coder",
+            "Qwen-Coder",
+            "Gemini",
+            "Llama",
+            "Cursor",
+            "GitHub Copilot",
+            "Manus",
+            "Windsurf",
+            "SuperNinja",
+            "Replit Agent",
+            "Devin",
+            "Kimi"
+          ]
+        },
+        "product": {
+          "type": "string",
+          "minLength": 1
+        },
+        "edition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_or_runtime_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runtime_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "integration_mechanism": {
+          "type": "string",
+          "minLength": 1
+        },
+        "access_status": {
+          "enum": [
+            "AVAILABLE",
+            "UNAVAILABLE",
+            "UNAUTHENTICATED",
+            "NOT_APPLICABLE"
+          ]
+        }
+      }
+    },
+    "tsar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "commit_sha",
+        "manifest_version",
+        "manifest_sha256",
+        "policy_files"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[^\\s]+/[^\\s]+$"
+        },
+        "commit_sha": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{40}$"
+        },
+        "manifest_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "policy_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claimed_level",
+        "covered_operations",
+        "uncovered_operations"
+      ],
+      "properties": {
+        "claimed_level": {
+          "enum": [
+            "E0",
+            "E1",
+            "E2",
+            "E3",
+            "E4",
+            "E5",
+            "E6"
+          ]
+        },
+        "covered_operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "uncovered_operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "status",
+        "tool",
+        "version",
+        "exit_code"
+      ],
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "NOT_RUN",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "kind"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sanitized": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
