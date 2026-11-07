@@ -195,11 +195,12 @@ def test_audit_symlink_failure_blocks_pre_tool_use(tmp_path, monkeypatch):
     audit_path = _audit_file(tmp_path.resolve(), "session-123")
     audit_path.unlink()
     audit_path.symlink_to(tmp_path / "target.jsonl")
-    with pytest.raises(OSError):
-        handle_event(
-            event(tmp_path, tool_name="Read", tool_use_id="tool-7",
-                  tool_input={"file_path": str(tmp_path / "file.txt")}),
-        )
+    result = handle_event(
+        event(tmp_path, tool_name="Read", tool_use_id="tool-7",
+              tool_input={"file_path": str(tmp_path / "file.txt")}),
+    )
+    assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert not (tmp_path / "target.jsonl").exists()
 
 
 def test_post_tool_use_records_provider_execution(tmp_path, monkeypatch):
