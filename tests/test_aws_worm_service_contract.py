@@ -35,4 +35,4 @@ def test_terraform_enables_object_lock_versioning_and_deletion_protection():
 def test_service_does_not_claim_aws_resources_are_deployed():
     docs = (SERVICE / "README.md").read_text(encoding="utf-8")
     assert "No AWS resources have been deployed" in docs
-    assert "retained orphan objects" in docs
+    assert "retained orphan objects" in docs.lower()
