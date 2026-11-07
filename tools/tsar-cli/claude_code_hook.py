@@ -497,6 +497,7 @@ def handle_event(
         tool_input = payload.get("tool_input")
         tool_use_id = payload.get("tool_use_id")
         outcome = "EXECUTED" if event == "PostToolUse" else "TOOL_FAILED"
+        state_changed = False
         if event == "PostToolUse" and tool_name == "Read" and isinstance(tool_input, dict):
             file_path = tool_input.get("file_path")
             try:
@@ -510,7 +511,7 @@ def handle_event(
                 read = set(state["read_policy_files"])
                 read.add(canonical)
                 state["read_policy_files"] = sorted(read)
-                _write_state(state_path, state)
+                state_changed = True
         _append_audit(audit_path, {
             **audit_base,
             "tool_use_id": tool_use_id,
@@ -519,6 +520,8 @@ def handle_event(
             "event": event,
             "tsar_commit_sha": state["tsar_commit_sha"],
         })
+        if state_changed:
+            _write_state(state_path, state)
         return None
 
     raise ClaudeHookError(f"Unsupported Claude Code hook event: {event!r}")
