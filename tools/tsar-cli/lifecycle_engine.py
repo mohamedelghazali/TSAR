@@ -100,7 +100,7 @@ def classify_task(task: str, explicit_domains: Iterable[str] = (), impact: str =
     high = impact == "high" or (
         impact == "auto" and any(term in normalized for term in HIGH_IMPACT_TERMS)
     )
-    gates = ["upstream_preflight", "core_policy_review", "applicable_domain_review"]
+    gates = ["upstream_preflight", "core_policy_review", "applicable_domain_review", "output_verification"]
     if high:
         gates += ["threat_model", "independent_security_review", "release_approval"]
     gates += ["automated_tests", "secret_scan", "secure_code_review", "audit_report"]

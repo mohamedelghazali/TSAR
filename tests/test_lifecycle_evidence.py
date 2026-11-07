@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "tsar-cli"))
-from lifecycle_evidence import (
+from output_verification import CheckResult, OutputGate, OutputGateError\nfrom lifecycle_evidence import (
     LifecycleEvidenceError, attest_gate, build_attestation_payload, verify_audit,
 )
 
@@ -27,10 +27,10 @@ def setup_run(tmp_path):
         "task": {
             "task": "Review lifecycle controls",
             "strict_required": True,
-            "required_gates": ["upstream_preflight", "core_policy_review", "release_approval"],
+            "required_gates": ["upstream_preflight", "core_policy_review", "release_approval", "output_verification"],
         },
         "provenance": {"upstream_commit_sha": "a" * 40},
-        "gates": {"upstream_preflight": "PASS", "core_policy_review": "PENDING", "release_approval": "PENDING"},
+        "gates": {"upstream_preflight": "PASS", "core_policy_review": "PENDING", "release_approval": "PENDING", "output_verification": "PENDING"},
         "evidence": [],
     }), encoding="utf-8")
     private = Ed25519PrivateKey.generate()
@@ -44,7 +44,7 @@ def setup_run(tmp_path):
         "keys": [{
             "key_id": "reviewer-01", "actor": "security-reviewer",
             "public_key": base64.b64encode(public).decode(),
-            "allowed_gates": ["core_policy_review"], "active": True,
+            "allowed_gates": ["core_policy_review", "output_verification"], "active": True,
         }],
     }), encoding="utf-8")
     keyring.chmod(0o600)
@@ -228,3 +228,67 @@ def test_gate_set_must_match_task_plan(tmp_path):
     audit.write_text(json.dumps(record), encoding="utf-8")
     with pytest.raises(LifecycleEvidenceError, match="does not match the signed task plan"):
         verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+
+
+
+def make_output_evidence(root, *, decision="PASS"):
+    changed = root / "output.py"
+    changed.write_text("print('verified')", encoding="utf-8")
+    gate = OutputGate(
+        task_id="task-e5", agent="test-agent", adapter_version="1.0.0",
+        tsar_commit_sha="a" * 40, manifest_version="1.2.0",
+        manifest_sha256="b" * 64, policy_hashes={"CORE_DIRECTIVE.md": "c" * 64},
+        domains=["development"], enforcement_level="E4",
+    )
+    output = root / "evidence" / "output-verification.json"
+    checks = [CheckResult("tests", "PASS", "pytest", "8.0", 0, "d" * 64)]
+    if decision == "PASS":
+        gate.evaluate(changed_files=[changed], checks=checks,
+                      required_checks=["tests"], output_path=output)
+    else:
+        with pytest.raises(OutputGateError):
+            gate.evaluate(changed_files=[changed], checks=[],
+                          required_checks=["tests"], output_path=output)
+    return output
+
+
+def sign_output_evidence(root, audit, keyring, private, output):
+    payload = build_attestation_payload(
+        audit, repo_root=root, gate="output_verification",
+        evidence_file=output.relative_to(root).as_posix(),
+        key_id="reviewer-01", keyring_file=keyring,
+    )
+    signature = base64.b64encode(private.sign(json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode())).decode()
+    attestation = root / "output-review-attestation.json"
+    attestation.write_text(json.dumps({
+        "schema": "tsar/reviewer-attestation/v1", "key_id": "reviewer-01",
+        "payload": payload, "signature": signature,
+    }), encoding="utf-8")
+    return attestation
+
+
+def test_e4_pass_evidence_can_be_bound_to_e5_reviewer_attestation(tmp_path):
+    root, audit, keyring, private = setup_run(tmp_path)
+    output = make_output_evidence(root)
+    attestation = sign_output_evidence(root, audit, keyring, private, output)
+    result = attest_gate(
+        audit, repo_root=root, gate="output_verification",
+        evidence_file=output.relative_to(root).as_posix(),
+        attestation_file=attestation, trusted_reviewers_file=keyring,
+    )
+    assert result["gates"]["output_verification"] == "PASS"
+    verified = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+    assert verified["integrity_status"] == "PASS"
+
+
+def test_e5_rejects_blocked_e4_output_evidence(tmp_path):
+    root, audit, keyring, private = setup_run(tmp_path)
+    output = make_output_evidence(root, decision="BLOCKED")
+    with pytest.raises(LifecycleEvidenceError, match="requires a PASS"):
+        build_attestation_payload(
+            audit, repo_root=root, gate="output_verification",
+            evidence_file=output.relative_to(root).as_posix(),
+            key_id="reviewer-01", keyring_file=keyring,
+        )

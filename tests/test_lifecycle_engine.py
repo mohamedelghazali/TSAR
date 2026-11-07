@@ -28,11 +28,13 @@ def test_high_impact_adds_strict_gates():
     assert plan.strict_required is True
     assert "threat_model" in plan.required_gates
     assert "independent_security_review" in plan.required_gates
+    assert "output_verification" in plan.required_gates
 
 
 def test_domain_heuristics_are_conservative_and_manifest_aware():
     plan = engine.classify_task("Implement OAuth login API", available_domains=["iam", "api"])
     assert set(plan.domains) == {"iam", "api"}
+    assert "output_verification" in plan.required_gates
 
 
 @pytest.mark.parametrize(

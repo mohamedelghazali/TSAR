@@ -237,6 +237,49 @@ def _load_keyring(keyring_file: Path, root: Path) -> dict[str, dict]:
     return result
 
 
+def _validate_output_verification_evidence(root: Path, supplied: str) -> None:
+    """Require a structurally valid PASS output-gate record before reviewer attestation."""
+    path, digest, size = _safe_relative_file(root, supplied)
+    parts = Path(supplied).parts
+    fd = _open_project_file(root, parts)
+    try:
+        chunks = []
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+    finally:
+        os.close(fd)
+    if len(raw) != size or _sha256_bytes(raw) != digest:
+        raise LifecycleEvidenceError("output verification evidence changed while being read")
+    try:
+        record = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise LifecycleEvidenceError("output verification evidence is not valid JSON") from exc
+    if not isinstance(record, dict):
+        raise LifecycleEvidenceError("output verification evidence must be an object")
+    try:
+        from output_verification import OutputGate
+    except ImportError as exc:
+        raise LifecycleEvidenceError("output verification validator is unavailable") from exc
+    if not OutputGate.verify_record(record):
+        raise LifecycleEvidenceError("output verification evidence digest or schema is invalid")
+    if record.get("decision") != "PASS":
+        raise LifecycleEvidenceError("output verification gate requires a PASS decision")
+    required = record.get("required_checks")
+    checks = record.get("checks")
+    if not isinstance(required, list) or not required or not isinstance(checks, list):
+        raise LifecycleEvidenceError("output verification evidence has no mandatory check set")
+    by_name = {item.get("name"): item for item in checks if isinstance(item, dict)}
+    if any(not isinstance(name, str) or by_name.get(name, {}).get("status") != "PASS"
+           or by_name.get(name, {}).get("exit_code") != 0 for name in required):
+        raise LifecycleEvidenceError("one or more mandatory output checks are not PASS")
+    if record.get("missing_required_checks") or record.get("failed_required_checks"):
+        raise LifecycleEvidenceError("output verification evidence reports missing or failed checks")
+
+
 def build_attestation_payload(audit_file: Path, *, repo_root: Path, gate: str,
                               evidence_file: str, key_id: str, keyring_file: Path,
                               decision: str = "PASS", issued_at: str | None = None) -> dict:
@@ -257,6 +300,8 @@ def build_attestation_payload(audit_file: Path, *, repo_root: Path, gate: str,
         raise LifecycleEvidenceError("reviewer key is not authorized for this gate")
     if decision not in {"PASS", "FAIL"}:
         raise LifecycleEvidenceError("decision must be PASS or FAIL")
+    if gate == "output_verification":
+        _validate_output_verification_evidence(root, evidence_file)
     evidence_path, digest, size = _safe_relative_file(root, evidence_file)
     timestamp = issued_at or datetime.now(timezone.utc).isoformat()
     try:
