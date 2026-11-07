@@ -9,7 +9,7 @@
 | `tsar lint` | Validate TSAR rules |
 | `tsar version` | Compare local/remote manifest version |
 | `tsar drift` | Detect drift between local and remote manifest (legacy version/file-set comparison) |
-| `tsar verify-upstream [--domain NAME]` | Pin upstream to one commit, validate manifest and all active paths, and fetch core plus selected domain rules (fail-closed) |
+| `tsar agent-gate [--domain NAME] -- COMMAND [ARGS...]` | Fail-closed preflight gate before launching a controlled agent command; exports pinned provenance via environment variables |\n| `tsar verify-upstream [--domain NAME]` | Pin upstream to one commit, validate manifest and all active paths, and fetch core plus selected domain rules (fail-closed) |
 | `tsar threat-model <file>` | STRIDE threat model |
 | `tsar lifecycle-plan <task> [--domain NAME] [--impact auto\|standard\|high]` | Create a deterministic lifecycle plan; does not execute or approve work |
 | `tsar lifecycle-start <task> --audit-file PATH [--domain NAME]` | Start a lifecycle run after upstream preflight |
