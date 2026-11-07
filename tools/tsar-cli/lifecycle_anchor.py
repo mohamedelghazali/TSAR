@@ -49,7 +49,7 @@ def _run_id(record: dict, repository: str) -> str:
     return _sha256(_canonical(stable))
 
 
-def _collect_evidence_files(record: dict, root: Path) -> tuple[dict[str, str], int]:
+def _collect_evidence_files(record: dict, root: Path, *, max_bytes: int = 4 * 1024 * 1024) -> tuple[dict[str, str], int]:
     entries = record.get("evidence", [])
     if not isinstance(entries, list):
         raise LifecycleAnchorError("audit evidence collection is invalid")
@@ -69,7 +69,7 @@ def _collect_evidence_files(record: dict, root: Path) -> tuple[dict[str, str], i
                 if not chunk:
                     break
                 size += len(chunk)
-                if size + total > 5 * 1024 * 1024:
+                if size + total > max_bytes:
                     raise LifecycleAnchorError("audit and evidence archive exceeds the external service 5 MiB limit")
                 chunks.append(chunk)
             data = b"".join(chunks)
@@ -287,9 +287,9 @@ def anchor_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
         raise LifecycleAnchorError("audit snapshot exceeds the external service 4 MiB limit")
     run_id = _run_id(record, repository)
     record_digest = _sha256(raw_audit)
-    evidence_files, evidence_bytes = _collect_evidence_files(record, root)
-    if len(raw_audit) + evidence_bytes > 5 * 1024 * 1024:
-        raise LifecycleAnchorError("audit snapshot and evidence exceed the external service 5 MiB total limit")
+    evidence_files, evidence_bytes = _collect_evidence_files(record, root, max_bytes=4 * 1024 * 1024 - len(raw_audit))
+    if len(raw_audit) + evidence_bytes > 4 * 1024 * 1024:
+        raise LifecycleAnchorError("audit snapshot and evidence exceed the external service 4 MiB total limit")
     service_id, public_key = _load_service_trust(Path(service_trust_file), root)
     previous = _verified_latest(
         endpoint, token=token, timeout=timeout, service_id=service_id,
