@@ -82,7 +82,7 @@ class AgentCompatibilityArchitectureTests(unittest.TestCase):
         self.assertEqual({row[0]: row[2] for row in parsed}, EXPECTED)
         self.assertIn("does not call providers", self.matrix)
         self.assertIn("Live provider conformance", self.matrix)
-        self.assertIn("does not establish authenticated live-provider conformance", self.matrix)
+        self.assertIn("does not establish live runtime conformance", self.matrix)
         self.assertIn("Instruction Source", self.matrix)
 
 
