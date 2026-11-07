@@ -48,7 +48,6 @@ concurrency:
 jobs:
   deploy-and-qualify:
     name: AWS WORM ${{ inputs.mode }} and live qualification
-    if: ${{ inputs.mode == 'plan-only' || inputs.compliance_retention_ack == 'YES_I_UNDERSTAND_COMPLIANCE_RETENTION_IS_IRREVERSIBLE' }}
     runs-on: ubuntu-latest
     environment: aws-production
     permissions:
@@ -82,6 +81,10 @@ jobs:
           [[ "$ANCHOR_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]] || { echo "Invalid anchor bucket name"; exit 1; }
           [[ "$STATE_BUCKET" != "$ANCHOR_BUCKET" ]] || { echo "State and evidence buckets must differ"; exit 1; }
           [[ "$RETENTION_DAYS" =~ ^[0-9]+$ ]] && (( RETENTION_DAYS >= 1 && RETENTION_DAYS <= 36500 )) || { echo "retention_days must be 1..36500"; exit 1; }
+          if [[ "$MODE" == "apply" && "$ACK" != "YES_I_UNDERSTAND_COMPLIANCE_RETENTION_IS_IRREVERSIBLE" ]]; then
+            echo "Apply blocked: acknowledge that S3 COMPLIANCE retention is irreversible."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -114,12 +117,16 @@ jobs:
         run: |
           set -euo pipefail
           account_id="$(aws sts get-caller-identity --query Account --output text)"
-          if ! aws s3api head-bucket --bucket "$STATE_BUCKET" --expected-bucket-owner "$account_id" >/dev/null 2>&1; then
+          created_state_bucket=false
+          if aws s3api head-bucket --bucket "$STATE_BUCKET" --expected-bucket-owner "$account_id" >/dev/null 2>&1; then
+            echo "Using the existing state bucket owned by the authenticated AWS account."
+          else
             if [[ "$AWS_REGION" == "us-east-1" ]]; then
               aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$AWS_REGION"
             else
               aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$AWS_REGION" --create-bucket-configuration "LocationConstraint=$AWS_REGION"
             fi
+            created_state_bucket=true
           fi
           aws s3api put-bucket-ownership-controls --bucket "$STATE_BUCKET" --ownership-controls 'Rules=[{ObjectOwnership=BucketOwnerEnforced}]'
           aws s3api put-public-access-block --bucket "$STATE_BUCKET" --public-access-block-configuration 'BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'
@@ -128,7 +135,14 @@ jobs:
           cat > /tmp/state-policy.json <<EOF
           {"Version":"2012-10-17","Statement":[{"Sid":"DenyInsecureTransport","Effect":"Deny","Principal":"*","Action":"s3:*","Resource":["arn:aws:s3:::$STATE_BUCKET","arn:aws:s3:::$STATE_BUCKET/*"],"Condition":{"Bool":{"aws:SecureTransport":"false"}}}]}
           EOF
-          aws s3api put-bucket-policy --bucket "$STATE_BUCKET" --policy file:///tmp/state-policy.json
+          if [[ "$created_state_bucket" == true ]]; then
+            aws s3api put-bucket-policy --bucket "$STATE_BUCKET" --policy file:///tmp/state-policy.json
+          else
+            aws s3api get-bucket-policy --bucket "$STATE_BUCKET" --query Policy --output text | grep -q 'DenyInsecureTransport' || {
+              echo "Existing state bucket policy must already deny insecure transport; refusing to replace its policy."
+              exit 1
+            }
+          fi
           aws s3api get-bucket-versioning --bucket "$STATE_BUCKET"
           aws s3api get-public-access-block --bucket "$STATE_BUCKET"
       - name: Initialize Terraform with durable S3 state

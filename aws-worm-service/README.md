@@ -25,16 +25,46 @@ The idempotency record is committed in the same DynamoDB transaction as the anch
 - A globally unique S3 bucket name.
 - An explicit retention decision. The example defaults to 365 days. S3 COMPLIANCE retention cannot be shortened or bypassed for retained object versions, including by the account root user.
 
-## Build and deploy (operator-controlled; not run by CI)
+## Deploy and live-test from GitHub Actions
 
-From this directory:
+Use the manually dispatched workflow
+`.github/workflows/aws-worm-deploy.yml`. It uses GitHub OIDC and stores no
+long-lived AWS access key.
 
-1. Create a random bearer token and store it in Secrets Manager. Record only the secret ARN.
-2. Review and set `aws_region`, `bucket_name`, `token_secret_arn`, `retention_days`, and `allowed_repositories` in a private tfvars file. Never commit that file.
-3. Run `terraform init`, `terraform fmt -check`, `terraform validate`, and `terraform plan`. Review the plan carefully before any apply.
-4. Only after explicit operational approval, run `terraform apply`.
-5. Run `python tools/export_service_trust.py --key-id <KMS_KEY_ARN> --service-id <SERVICE_ID> --region <AWS_REGION> --output <SECURE_PATH>/anchor-service.json` from this directory. The helper checks the KMS key type, exports the raw 32-byte Ed25519 public key, and creates a mode-0600 trust file outside the repository without overwriting an existing file. Verify the printed fingerprint through an independent administrative channel before distributing the trust file.
-6. Set `TSAR_AUDIT_ANCHOR_TOKEN` in the TSAR runtime environment and use the API endpoint output with `tsar lifecycle-anchor`.
+### One-time AWS/GitHub setup
+
+1. Enable the GitHub Actions OIDC provider
+   `token.actions.githubusercontent.com` in the target AWS account.
+2. Create a dedicated deployment role trusted only for subject
+   `repo:mohamedelghazali/TSAR:environment:aws-production` and audience
+   `sts.amazonaws.com`. Scope it to the Terraform state bucket, resources in
+   this service, read access to the configured Secrets Manager secret, and
+   `iam:PassRole` only for the Lambda execution role.
+3. Create the GitHub environment `aws-production` and configure required
+   reviewers as the production deployment gate.
+4. Create a Secrets Manager secret whose `SecretString` is a high-entropy
+   bearer token. Never place it in GitHub inputs, source, Terraform variables,
+   or logs.
+5. Choose two different globally unique buckets: Terraform state and immutable
+   evidence archive.
+
+### Dispatch
+
+Open **Actions → AWS WORM Deploy and Live Qualification → Run workflow**.
+Provide the role ARN, region, both bucket names, secret ARN, and retention.
+
+- `plan-only` validates and displays a Terraform plan without provisioning.
+- `apply` bootstraps an encrypted/versioned state bucket with S3 lockfile
+  locking, applies the saved plan, and runs live qualification.
+- `apply` requires explicit acknowledgement of irreversible S3 Object Lock
+  COMPLIANCE retention.
+- Live tests cover unauthenticated rejection, append, KMS Ed25519 signature
+  verification, latest-anchor read, idempotent retry, S3 versioning, Object
+  Lock COMPLIANCE mode, and public-access blocking.
+
+The workflow does not run on pull requests, stores no AWS credentials, and
+does not destroy resources or shorten retention. Existing state-bucket policies
+are preserved; an existing bucket must already deny insecure transport.
 
 The KMS `Sign` call uses `ED25519_SHA_512` with `MessageType=RAW`, matching the standard Ed25519 signature verified by the TSAR client. Do not switch to the pre-hash variant without changing and testing the client protocol.
 
