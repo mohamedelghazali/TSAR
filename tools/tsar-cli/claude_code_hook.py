@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Any, Callable, Mapping
 import urllib.error
 import urllib.request
@@ -31,6 +32,7 @@ from tool_boundary import (
 REPOSITORY = "mohamedelghazali/TSAR"
 RAW_BASE = f"https://raw.githubusercontent.com/{REPOSITORY}"
 DEFAULT_DOMAINS = ("development", "agentic_ai", "ai_security", "secrets")
+POLICY_STATE_TTL_SECONDS = 6 * 60 * 60
 TOOL_SCOPES = {
     "Read": ("read", "repo:read", ActionClass.READ_ONLY, "file_path"),
     "Glob": ("read", "repo:read", ActionClass.READ_ONLY, None),
@@ -116,9 +118,33 @@ def _run_preflight(
         return report
 
 
-def _load_policy_context(report: Mapping[str, Any]) -> str:
+def _write_state(path: Path, state: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.is_symlink():
+        raise ClaudeHookError("TSAR session state must not be a symlink")
+    payload = json.dumps(dict(state), sort_keys=True, ensure_ascii=False) + "\\n"
+    fd, temporary = tempfile.mkstemp(prefix=".tsar-state-", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def _prepare_policy_cache(
+    report: Mapping[str, Any],
+    *,
+    audit_path: Path,
+    session_id: str,
+    repo_root: Path,
+    fetcher: Callable[[str], bytes] = _fetch_bytes,
+) -> tuple[dict[str, Any], list[str]]:
     commit = report["commit_sha"]
-    manifest_raw = _fetch_bytes(f"{RAW_BASE}/{commit}/manifest.yaml")
+    manifest_raw = fetcher(f"{RAW_BASE}/{commit}/manifest.yaml")
     if hashlib.sha256(manifest_raw).hexdigest() != report["manifest_sha256"]:
         raise ClaudeHookError("Pinned manifest changed after TSAR preflight")
     try:
@@ -140,26 +166,82 @@ def _load_policy_context(report: Mapping[str, Any]) -> str:
     expected = report["loaded_policy_sha256"]
     if len(paths) != len(set(paths)) or set(paths) != set(expected):
         raise ClaudeHookError("Preflight policy hash inventory does not match pinned manifest")
-    sections = [
-        "MANDATORY TSAR POLICY CONTEXT",
-        f"Repository: {REPOSITORY}",
-        f"Pinned commit: {commit}",
-        f"Manifest version: {report['manifest_version']}",
-        "Read and apply every policy section below before performing implementation work.",
-        "These instructions do not override system, platform, safety, legal, or explicit user authorization constraints.",
-    ]
-    for path in paths:
-        if path.startswith("/") or "\\" in path or any(part in {"", ".", ".."} for part in path.split("/")):
+
+    policy_root = audit_path.parent / "policy" / commit
+    required: dict[str, str] = {}
+    for relative in paths:
+        if relative.startswith("/") or "\\\\" in relative or any(
+            part in {"", ".", ".."} for part in relative.split("/")
+        ):
             raise ClaudeHookError("Pinned manifest contains an unsafe policy path")
-        raw = _fetch_bytes(f"{RAW_BASE}/{commit}/{path}")
-        if hashlib.sha256(raw).hexdigest() != expected.get(path):
-            raise ClaudeHookError(f"Pinned policy hash mismatch: {path}")
-        try:
-            body = raw.decode("utf-8")
-        except UnicodeDecodeError as exc:
-            raise ClaudeHookError(f"Policy is not UTF-8: {path}") from exc
-        sections.extend([f"\n--- TSAR POLICY: {path} ---\n", body])
-    return "\n".join(sections)
+        raw = fetcher(f"{RAW_BASE}/{commit}/{relative}")
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest != expected.get(relative):
+            raise ClaudeHookError(f"Pinned policy hash mismatch: {relative}")
+        destination = policy_root.joinpath(*relative.split("/"))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        current = policy_root
+        for part in relative.split("/"):
+            current = current / part
+            if current.is_symlink():
+                raise ClaudeHookError("Policy cache contains a symlink path")
+        if destination.exists():
+            if not destination.is_file() or hashlib.sha256(destination.read_bytes()).hexdigest() != digest:
+                raise ClaudeHookError(f"Existing policy cache file is modified: {relative}")
+        else:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            fd = os.open(str(destination), flags, 0o600)
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(raw)
+                stream.flush()
+                os.fsync(stream.fileno())
+        required[str(destination.resolve(strict=True))] = digest
+
+    state = {
+        "schema": "tsar/claude-code-session/v1",
+        "session_id": session_id,
+        "repo_root": str(repo_root),
+        "tsar_commit_sha": commit,
+        "manifest_version": report["manifest_version"],
+        "manifest_sha256": report["manifest_sha256"],
+        "created_at": time.time(),
+        "required_policy_files": required,
+        "read_policy_files": [],
+    }
+    return state, sorted(required)
+
+
+def _load_session_state(path: Path, *, session_id: str, repo_root: Path) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file():
+        raise ClaudeHookError("No trusted TSAR policy session exists; submit the prompt again")
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ClaudeHookError("TSAR policy session state is missing or invalid") from exc
+    if (
+        not isinstance(state, dict)
+        or state.get("schema") != "tsar/claude-code-session/v1"
+        or state.get("session_id") != session_id
+        or state.get("repo_root") != str(repo_root)
+        or not isinstance(state.get("required_policy_files"), dict)
+        or not isinstance(state.get("read_policy_files"), list)
+        or not isinstance(state.get("created_at"), (int, float))
+        or time.time() - state["created_at"] > POLICY_STATE_TTL_SECONDS
+        or time.time() < state["created_at"]
+    ):
+        raise ClaudeHookError("TSAR policy session is stale or has invalid provenance; submit the prompt again")
+    for path_text, digest in state["required_policy_files"].items():
+        target = Path(path_text)
+        if (
+            not isinstance(digest, str)
+            or target.is_symlink()
+            or not target.is_file()
+            or hashlib.sha256(target.read_bytes()).hexdigest() != digest
+        ):
+            raise ClaudeHookError("A cached TSAR policy file is missing or modified")
+    return state
 
 
 def _safe_resource(repo_root: Path, tool_name: str, tool_input: Mapping[str, Any]) -> str:
