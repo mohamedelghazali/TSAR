@@ -20,8 +20,8 @@ active_files:
     - rules/development/secure-sdlc.md
 """
 POLICIES = {
-    "system/CORE_DIRECTIVE.md": b"# Core directive\\nAlways follow TSAR.\\n",
-    "rules/development/secure-sdlc.md": b"# Secure SDLC\\nReview changes.\\n",
+    "system/CORE_DIRECTIVE.md": b"# Core directive\nAlways follow TSAR.\n",
+    "rules/development/secure-sdlc.md": b"# Secure SDLC\nReview changes.\n",
 }
 
 
@@ -70,7 +70,7 @@ def prime_session(tmp_path, monkeypatch):
     )
     context = result["hookSpecificOutput"]["additionalContext"]
     assert "Read every pinned TSAR policy file" in context
-    paths = context.split("Policy files:\\n", 1)[1].splitlines()
+    paths = context.split("Policy files:\n", 1)[1].splitlines()
     for index, path in enumerate(paths):
         handle_event(
             event(tmp_path, "PostToolUse", tool_name="Read", tool_use_id=f"policy-{index}",
