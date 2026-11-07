@@ -81,3 +81,57 @@ jobs:
         run: |
           terraform -chdir=examples/secure/terraform init -backend=false
           terraform -chdir=examples/secure/terraform validate
+
+  claude-code-windows:
+    name: "Claude Code Windows Hook Compatibility"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies and TSAR CLI
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pip install -e .\tools\tsar-cli
+
+      - name: Validate Claude Code hook settings
+        shell: pwsh
+        run: |
+          $settings = Get-Content integrations/claude-code/settings.json -Raw | ConvertFrom-Json
+          foreach ($eventName in @("UserPromptSubmit", "PreToolUse")) {
+            $handler = $settings.hooks.$eventName[0].hooks[0]
+            if ($handler.command -ne "python") { throw "$eventName must invoke the Python executable directly" }
+            if (($handler.args -join " ") -ne "-m claude_code_hook") { throw "$eventName has an invalid hook argument vector" }
+            if ($handler.onFailure -ne "block") { throw "$eventName must fail closed" }
+          }
+          if ($settings.hooks.PostToolUse[0].hooks[0].command -ne "python") { throw "PostToolUse hook command mismatch" }
+          if ($settings.hooks.PostToolUseFailure[0].hooks[0].command -ne "python") { throw "PostToolUseFailure hook command mismatch" }
+          Write-Host "Claude Code hook settings are valid for Windows exec-form invocation."
+
+      - name: Verify Windows stdin, stdout, exit-code, and deny behavior
+        shell: pwsh
+        run: |
+          $env:CLAUDE_CODE_DISABLE_FILE_MENTIONS = "1"
+          $payload = @{
+            hook_event_name = "PreToolUse"
+            session_id = "windows-smoke"
+            cwd = $env:RUNNER_TEMP
+            tool_name = "Bash"
+            tool_use_id = "windows-smoke"
+            tool_input = @{ command = "whoami" }
+          } | ConvertTo-Json -Compress -Depth 5
+          $output = $payload | python -m claude_code_hook 2>$null
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 2) { throw "Expected fail-closed exit code 2, received $exitCode" }
+          $decision = ($output | ConvertFrom-Json).hookSpecificOutput.permissionDecision
+          if ($decision -ne "deny") { throw "Expected a structured deny decision, received '$decision'" }
+          Write-Host "Windows hook process returned the expected fail-closed decision."
+
+      - name: Run Claude Code adapter tests on Windows
+        run: python -m pytest -q tests/test_claude_code_hook.py tests/test_tool_boundary.py
+
