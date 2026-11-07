@@ -13,6 +13,7 @@ import json
 import os
 import re
 import uuid
+from pathlib import PurePosixPath
 
 import boto3
 from botocore.exceptions import ClientError
@@ -165,6 +166,41 @@ def _append(request):
         raise ValueError("upstream commit does not match audit snapshot")
     if request.get("gate_states") != audit_record.get("gates"):
         raise ValueError("gate states do not match audit snapshot")
+    evidence_entries = audit_record.get("evidence", [])
+    evidence_files = request.get("evidence_files_b64")
+    if not isinstance(evidence_entries, list) or not isinstance(evidence_files, dict):
+        raise ValueError("evidence archive collection is invalid")
+    expected_evidence = {}
+    for entry in evidence_entries:
+        if not isinstance(entry, dict):
+            raise ValueError("audit evidence entry is invalid")
+        path = entry.get("path")
+        parts = PurePosixPath(path).parts if isinstance(path, str) else ()
+        if (not path or "\\" in path or PurePosixPath(path).is_absolute()
+                or any(part in {"", ".", ".."} for part in parts)
+                or path in expected_evidence):
+            raise ValueError("audit evidence path is unsafe or duplicated")
+        size = entry.get("size_bytes")
+        sha = entry.get("sha256")
+        if not isinstance(size, int) or isinstance(size, bool) or size < 1 or not isinstance(sha, str) or not _SHA256.fullmatch(sha):
+            raise ValueError("audit evidence metadata is invalid")
+        expected_evidence[path] = (sha, size)
+    if set(evidence_files) != set(expected_evidence):
+        raise ValueError("evidence archive paths do not match the audit record")
+    archived_bytes = len(audit_bytes)
+    for path, encoded in evidence_files.items():
+        if not isinstance(encoded, str) or len(encoded) > 7 * 1024 * 1024:
+            raise ValueError("evidence archive entry is invalid or too large")
+        try:
+            evidence_bytes = base64.b64decode(encoded, validate=True)
+        except ValueError as exc:
+            raise ValueError("evidence archive entry is not valid Base64") from exc
+        expected_sha, expected_size = expected_evidence[path]
+        if len(evidence_bytes) != expected_size or digest(evidence_bytes) != expected_sha:
+            raise ValueError("evidence archive bytes do not match audit evidence metadata")
+        archived_bytes += len(evidence_bytes)
+    if archived_bytes > 5 * 1024 * 1024:
+        raise ValueError("audit and evidence archive exceeds the 5 MiB limit")
 
     existing_idem = ddb.get_item(
         TableName=TABLE,
