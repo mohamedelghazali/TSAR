@@ -33,6 +33,13 @@ jobs:
           -platform=darwin_arm64
       - run: git diff --exit-code -- examples/secure/terraform/.terraform.lock.hcl
       - run: terraform -chdir=examples/secure/terraform validate
+      - name: Validate AWS WORM service Terraform
+        run: |
+          set -euo pipefail
+          terraform -chdir=aws-worm-service/terraform init -backend=false
+          terraform -chdir=aws-worm-service/terraform validate
+      - name: Compile AWS WORM Lambda handler
+        run: python -m py_compile aws-worm-service/lambda/handler.py
 
   kubernetes:
     name: Kubernetes Schema Validation
