@@ -97,7 +97,7 @@ def _default_fetcher(url: str, timeout: int = 20) -> bytes:
 
 def _safe_project_path(root: Path, supplied: str | Path) -> Path:
     raw = Path(supplied)
-    if raw.is_absolute() or any(part in {"", ".", ".."} for part in raw.parts):
+    if raw.is_absolute() or "\\" in str(supplied) or any(part in {"", ".", ".."} for part in raw.parts):
         raise ReferenceHostError("Audit and evidence paths must be safe project-relative paths")
     current = root
     for part in raw.parts[:-1]:
@@ -119,16 +119,20 @@ def _safe_changed_files(root: Path, supplied: Iterable[str | Path]) -> list[Path
         raw = Path(item)
         candidate = raw if raw.is_absolute() else root / raw
         try:
+            lexical_parts = candidate.absolute().relative_to(root).parts
+        except ValueError as exc:
+            raise ReferenceHostError("Changed files must remain inside the project root") from exc
+        current = root
+        for part in lexical_parts:
+            current = current / part
+            if current.is_symlink():
+                raise ReferenceHostError("Symlink changed files are not accepted")
+        try:
             resolved = candidate.resolve(strict=True)
         except OSError as exc:
             raise ReferenceHostError(f"Changed file is missing: {item}") from exc
         if not resolved.is_relative_to(root):
             raise ReferenceHostError("Changed files must remain inside the project root")
-        current = root
-        for part in resolved.relative_to(root).parts:
-            current = current / part
-            if current.is_symlink():
-                raise ReferenceHostError("Symlink changed files are not accepted")
         if not resolved.is_file():
             raise ReferenceHostError(f"Changed path is not a regular file: {item}")
         if resolved not in seen:
@@ -212,17 +216,22 @@ class ReferenceHost:
             manifest = yaml.safe_load(manifest_raw)
         except yaml.YAMLError as exc:
             raise ReferenceHostError("Pinned manifest cannot be parsed") from exc
+        lifecycle = manifest.get("lifecycle") if isinstance(manifest, dict) else None
+        enforcement = manifest.get("enforcement") if isinstance(manifest, dict) else None
         if (
             not isinstance(manifest, dict)
+            or not isinstance(lifecycle, dict)
+            or not isinstance(enforcement, dict)
             or manifest.get("repository") != f"https://github.com/{REPOSITORY}"
             or manifest.get("version") != version
-            or manifest.get("lifecycle", {}).get("fail_closed") is not True
-            or manifest.get("enforcement", {}).get("default_mode") != "strict"
-            or manifest.get("enforcement", {}).get("allow_advisory_fallback") is not False
+            or lifecycle.get("fail_closed") is not True
+            or enforcement.get("default_mode") != "strict"
+            or enforcement.get("allow_advisory_fallback") is not False
         ):
             raise ReferenceHostError("Pinned manifest identity or strict-mode settings are invalid")
         active = manifest.get("active_files")
-        if not isinstance(active, dict) or set(active.get("core", [])) != REQUIRED_CORE:
+        if (not isinstance(active, dict) or not isinstance(active.get("core"), list)
+                or set(active["core"]) != REQUIRED_CORE):
             raise ReferenceHostError("Pinned manifest does not contain the exact four-file core policy set")
         if any(not isinstance(domain, str) or domain not in active for domain in domains):
             raise ReferenceHostError("Preflight selected an unknown manifest domain")
@@ -270,6 +279,8 @@ class ReferenceHost:
                     timeout=command.timeout_seconds,
                 )
                 exit_code = completed.returncode
+                if not isinstance(exit_code, int):
+                    raise OSError("check runner returned a non-integer exit code")
                 stdout = completed.stdout or ""
                 stderr = completed.stderr or ""
                 if isinstance(stdout, bytes):
@@ -369,7 +380,12 @@ class ReferenceHost:
                 arguments=arguments,
                 approval=approval,
             )
-            return boundary.dispatch(request, self.registry_dispatcher(tool))
+            dispatcher = self.dispatchers.get(tool)
+            if dispatcher is None:
+                def reject_unregistered(_arguments: Mapping[str, Any]) -> Any:
+                    raise ToolBoundaryError("unregistered tool reached the host dispatcher")
+                dispatcher = reject_unregistered
+            return boundary.dispatch(request, dispatcher)
 
         context = HostContext(
             task_id=task_id,
