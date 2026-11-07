@@ -236,10 +236,35 @@ resource "aws_apigatewayv2_route" "latest" {
   target    = "integrations/${aws_apigatewayv2_integration.anchor.id}"
 }
 
+resource "aws_cloudwatch_log_group" "api" {
+  name              = "/aws/apigateway/${var.name_prefix}-worm-anchor"
+  retention_in_days = 90
+}
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.anchor.id
   name        = "$default"
   auto_deploy = true
+
+  default_route_settings {
+    throttling_burst_limit = 20
+    throttling_rate_limit  = 10
+    detailed_metrics_enabled = true
+  }
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api.arn
+    format = jsonencode({
+      requestId = "$context.requestId"
+      sourceIp  = "$context.identity.sourceIp"
+      requestTime = "$context.requestTime"
+      httpMethod = "$context.httpMethod"
+      routeKey = "$context.routeKey"
+      status = "$context.status"
+      protocol = "$context.protocol"
+      responseLength = "$context.responseLength"
+    })
+  }
 }
 
 resource "aws_lambda_permission" "api" {
