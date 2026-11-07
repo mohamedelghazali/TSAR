@@ -342,7 +342,7 @@ def handle_event(
     payload: Mapping[str, Any],
     *,
     preflight: Callable[[Path, tuple[str, ...]], dict[str, Any]] = _run_preflight,
-    policy_loader: Callable[[Mapping[str, Any]], str] = _load_policy_context,
+    policy_fetcher: Callable[[str], bytes] = _fetch_bytes,
 ) -> dict[str, Any] | None:
     if not isinstance(payload, Mapping):
         raise ClaudeHookError("Hook input must be a JSON object")
@@ -354,8 +354,11 @@ def handle_event(
     session_id = payload.get("session_id")
     if not isinstance(session_id, str) or not session_id:
         raise ClaudeHookError("Claude hook input is missing session_id")
-    domains = _domains_from_env()
+    domains = tuple(domain for domain in _domains_from_env() if domain != "core")
+    if not domains:
+        raise ClaudeHookError("At least one non-core TSAR policy domain must be selected")
     audit_path = _audit_file(repo_root, session_id)
+    state_path = audit_path.with_suffix(".state.json")
     audit_base = {
         "provider": "claude-code",
         "session_id": session_id,
@@ -364,30 +367,78 @@ def handle_event(
 
     if event == "UserPromptSubmit":
         report = preflight(repo_root, domains)
-        context = policy_loader(report)
+        state, policy_paths = _prepare_policy_cache(
+            report,
+            audit_path=audit_path,
+            session_id=session_id,
+            repo_root=repo_root,
+            fetcher=policy_fetcher,
+        )
+        _write_state(state_path, state)
+        instructions = [
+            "TSAR STRICT MODE IS ACTIVE.",
+            f"Verified upstream commit: {report['commit_sha']}",
+            f"Manifest version: {report['manifest_version']}",
+            "Before any other tool call, read every policy file listed below using the Read tool.",
+            "TSAR blocks all non-policy tool calls until every listed file has been read successfully.",
+            "After reading them, follow their constraints throughout this task. A tool permission prompt remains controlled by Claude Code.",
+            "Policy files:",
+            *policy_paths,
+        ]
         return {
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
-                "additionalContext": context,
+                "additionalContext": "\\n".join(instructions),
             }
         }
 
     if event == "PreToolUse":
-        report = preflight(repo_root, domains)
+        state = _load_session_state(state_path, session_id=session_id, repo_root=repo_root)
         tool_use_id = payload.get("tool_use_id")
         if not isinstance(tool_use_id, str) or not tool_use_id:
             raise ClaudeHookError("PreToolUse event is missing tool_use_id")
+        tool_name = payload.get("tool_name")
+        tool_input = payload.get("tool_input")
+        required = set(state["required_policy_files"])
+        read = set(state["read_policy_files"])
+        if len(read) != len(state["read_policy_files"]) or not read.issubset(required):
+            raise ClaudeHookError("TSAR policy-read state is malformed")
+        if read != required:
+            if tool_name != "Read" or not isinstance(tool_input, dict):
+                return {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": "Read every pinned TSAR policy file before using any other tool.",
+                    }
+                }
+            file_path = tool_input.get("file_path")
+            try:
+                canonical = str(Path(file_path).expanduser().resolve(strict=True))
+            except (TypeError, OSError) as exc:
+                raise ClaudeHookError("Policy Read path is invalid or missing") from exc
+            if canonical not in required or canonical in read:
+                return {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": "Only unread pinned TSAR policy files may be read before policy loading is complete.",
+                    }
+                }
+
         principal = os.environ.get("TSAR_CLAUDE_PRINCIPAL") or getpass.getuser()
-        request, spec = _request_for_tool(repo_root, payload, principal)
+        request, spec = _request_for_tool(repo_root, payload, principal, state)
         scopes = _scopes_from_env()
+
         def sink(event_record: Mapping[str, Any]) -> None:
             _append_audit(audit_path, {
                 **audit_base,
                 "tool_use_id": tool_use_id,
-                "tsar_commit_sha": report["commit_sha"],
-                "manifest_version": report["manifest_version"],
+                "tsar_commit_sha": state["tsar_commit_sha"],
+                "manifest_version": state["manifest_version"],
                 **dict(event_record),
             })
+
         boundary = ToolBoundary(
             {spec.name: spec},
             AuthorizationContext(principal, scopes),
@@ -407,12 +458,32 @@ def handle_event(
         return None
 
     if event in {"PostToolUse", "PostToolUseFailure"}:
+        state = _load_session_state(state_path, session_id=session_id, repo_root=repo_root)
+        tool_name = payload.get("tool_name")
+        tool_input = payload.get("tool_input")
+        tool_use_id = payload.get("tool_use_id")
+        outcome = "EXECUTED" if event == "PostToolUse" else "TOOL_FAILED"
+        if event == "PostToolUse" and tool_name == "Read" and isinstance(tool_input, dict):
+            file_path = tool_input.get("file_path")
+            try:
+                canonical = str(Path(file_path).expanduser().resolve(strict=True))
+            except (TypeError, OSError):
+                canonical = ""
+            expected = state["required_policy_files"].get(canonical)
+            if expected is not None:
+                if hashlib.sha256(Path(canonical).read_bytes()).hexdigest() != expected:
+                    raise ClaudeHookError("Read policy file does not match its pinned SHA-256")
+                read = set(state["read_policy_files"])
+                read.add(canonical)
+                state["read_policy_files"] = sorted(read)
+                _write_state(state_path, state)
         _append_audit(audit_path, {
             **audit_base,
-            "tool_use_id": payload.get("tool_use_id"),
-            "tool_name": payload.get("tool_name"),
-            "outcome": "EXECUTED" if event == "PostToolUse" else "TOOL_FAILED",
+            "tool_use_id": tool_use_id,
+            "tool_name": tool_name,
+            "outcome": outcome,
             "event": event,
+            "tsar_commit_sha": state["tsar_commit_sha"],
         })
         return None
 
