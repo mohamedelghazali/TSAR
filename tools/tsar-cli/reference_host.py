@@ -144,7 +144,7 @@ def _safe_changed_files(root: Path, supplied: Iterable[str | Path]) -> list[Path
 
 
 class ReferenceHost:
-    """Run preflight, inject pinned policy, gate tools, execute checks, and emit E4 evidence.
+    """Run preflight, inject pinned policy, gate tools, and emit E6 host evidence.
 
     The host owns agent invocation, tool registration, authorization identity,
     approval verification, audit persistence, check commands, and changed-file
@@ -335,6 +335,8 @@ class ReferenceHost:
         output_path = _safe_project_path(self.root, output_evidence_file)
         if audit_path == output_path:
             raise ReferenceHostError("Audit and output evidence paths must be different")
+        if audit_path.exists() or output_path.exists():
+            raise ReferenceHostError("Refusing to overwrite existing lifecycle or output evidence")
         audit_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
