@@ -206,6 +206,7 @@ def _prepare_policy_cache(
         "tsar_commit_sha": commit,
         "manifest_version": report["manifest_version"],
         "manifest_sha256": report["manifest_sha256"],
+        "policy_cache_root": str(policy_root.resolve()),
         "created_at": time.time(),
         "required_policy_files": required,
         "read_policy_files": [],
@@ -226,6 +227,7 @@ def _load_session_state(path: Path, *, session_id: str, repo_root: Path) -> dict
         or state.get("session_id") != session_id
         or state.get("repo_root") != str(repo_root)
         or not isinstance(state.get("required_policy_files"), dict)
+        or not isinstance(state.get("policy_cache_root"), str)
         or not isinstance(state.get("read_policy_files"), list)
         or not isinstance(state.get("created_at"), (int, float))
         or time.time() - state["created_at"] > POLICY_STATE_TTL_SECONDS
@@ -267,9 +269,9 @@ def _safe_resource(
         raise ClaudeHookError("Tool path cannot be resolved safely") from exc
     policy_files = state.get("required_policy_files", {})
     if tool_name == "Read" and str(resolved) in policy_files:
-        return "tsar-policy:" + str(Path(str(resolved)).relative_to(
-            Path(state["repo_root"]).parent
-        ).as_posix())
+        return "tsar-policy:" + Path(str(resolved)).relative_to(
+            Path(state["policy_cache_root"])
+        ).as_posix()
     try:
         relative = resolved.relative_to(repo_root)
     except ValueError as exc:
