@@ -152,3 +152,26 @@ def test_dispatch_error_is_audited_and_propagated():
         boundary.dispatch(request(), fail)
     assert events[-1]["outcome"] == "DISPATCH_ERROR"
     assert events[-1]["error_type"] == "RuntimeError"
+\n\ndef test_authorize_records_allow_without_claiming_execution():
+    boundary, events = make_boundary()
+    normalized = boundary.authorize(request())
+    assert normalized.tool == "repo.write"
+    assert len(events) == 1
+    assert events[0]["decision"] == "ALLOW"
+    assert "outcome" not in events[0]
+
+
+def test_authorize_denial_is_audited_without_dispatch():
+    boundary, events = make_boundary(scopes={"repo:read"})
+    with pytest.raises(ToolBoundaryError, match="missing_authorization_scope"):
+        boundary.authorize(request())
+    assert len(events) == 1
+    assert events[0]["decision"] == "DENY"
+    assert events[0]["reason"] == "missing_authorization_scope"
+
+
+def test_record_outcome_is_a_separate_audited_event():
+    boundary, events = make_boundary()
+    normalized = boundary.authorize(request())
+    boundary.record_outcome(normalized, "EXECUTED")
+    assert [event.get("outcome") for event in events] == [None, "EXECUTED"]
