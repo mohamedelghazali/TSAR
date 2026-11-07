@@ -45,11 +45,13 @@ def main() -> None:
             raise SystemExit("Wheel is missing the tsar console entry point.")
 
     with tarfile.open(sdists[0], "r:gz") as archive:
-        members = {Path(member.name).name for member in archive.getmembers() if member.isfile()}
-        missing = required_modules | {"pyproject.toml"} - members
+        files = [Path(member.name) for member in archive.getmembers() if member.isfile()]
+        members = {member.name for member in files}
+        missing = (required_modules | {"pyproject.toml"}) - members
         if missing:
             raise SystemExit(f"Source distribution is missing required files: {sorted(missing)}")
-        if not any(member.name.endswith(f"tsar-cli-{version}/pyproject.toml") for member in archive.getmembers()):
+        roots = {member.parts[0] for member in files if len(member.parts) > 1}
+        if not any(root.endswith(f"-{version}") for root in roots):
             raise SystemExit("Source distribution root/version does not match pyproject.toml.")
 
     print(f"Verified TSAR CLI {version}: wheel={sha256(wheels[0])} sdist={sha256(sdists[0])}")
