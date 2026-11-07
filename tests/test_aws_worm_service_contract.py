@@ -36,3 +36,22 @@ def test_service_does_not_claim_aws_resources_are_deployed():
     docs = (SERVICE / "README.md").read_text(encoding="utf-8")
     assert "Only a successful GitHub Actions apply" in docs
     assert "retained orphan objects" in docs.lower()
+
+
+def test_github_aws_deployment_uses_oidc_and_explicit_retention_acknowledgement():
+    workflow = (ROOT / ".github" / "workflows" / "aws-worm-deploy.yml").read_text(encoding="utf-8")
+    terraform = (SERVICE / "terraform" / "main.tf").read_text(encoding="utf-8")
+    assert "id-token: write" in workflow
+    assert "aws-actions/configure-aws-credentials@" in workflow
+    assert "use_lockfile=true" in workflow
+    assert "YES_I_UNDERSTAND_COMPLIANCE_RETENTION_IS_IRREVERSIBLE" in workflow
+    assert "aws secretsmanager get-secret-value" in workflow
+    assert "live_smoke_test.py" in workflow
+    assert 'backend "s3" {}' in terraform
+    assert "terraform destroy" not in workflow
+
+
+def test_live_aws_smoke_test_script_is_valid_python():
+    import ast
+    source = (SERVICE / "tools" / "live_smoke_test.py").read_text(encoding="utf-8")
+    ast.parse(source)
