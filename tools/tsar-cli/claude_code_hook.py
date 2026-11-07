@@ -122,7 +122,7 @@ def _write_state(path: Path, state: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_symlink():
         raise ClaudeHookError("TSAR session state must not be a symlink")
-    payload = json.dumps(dict(state), sort_keys=True, ensure_ascii=False) + "\\n"
+    payload = json.dumps(dict(state), sort_keys=True, ensure_ascii=False) + "\n"
     fd, temporary = tempfile.mkstemp(prefix=".tsar-state-", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
@@ -170,7 +170,7 @@ def _prepare_policy_cache(
     policy_root = audit_path.parent / "policy" / commit
     required: dict[str, str] = {}
     for relative in paths:
-        if relative.startswith("/") or "\\\\" in relative or any(
+        if relative.startswith("/") or "\\" in relative or any(
             part in {"", ".", ".."} for part in relative.split("/")
         ):
             raise ClaudeHookError("Pinned manifest contains an unsafe policy path")
@@ -390,7 +390,7 @@ def handle_event(
         return {
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
-                "additionalContext": "\\n".join(instructions),
+                "additionalContext": "\n".join(instructions),
             }
         }
 
