@@ -194,6 +194,22 @@ def cmd_lifecycle_anchor_verify(args) -> int:
     return 0
 
 
+def cmd_agent_gate(args) -> int:
+    """Launch a controlled agent command only after successful upstream preflight."""
+    from agent_adapter import AgentGateError, run_agent
+    command = args.agent_command[1:] if args.agent_command and args.agent_command[0] == "--" else args.agent_command
+    try:
+        return run_agent(
+            command,
+            domains=args.domain,
+            report_path=Path(args.report),
+            cwd=Path(args.cwd).expanduser().resolve() if args.cwd else None,
+        )
+    except AgentGateError as exc:
+        print(f"TSAR AGENT GATE: BLOCKED — {exc}", file=sys.stderr)
+        return 2
+
+
 def cmd_verify_upstream(args) -> int:
     """Verify the authoritative upstream snapshot before security-sensitive work."""
     script = Path(__file__).resolve().with_name("verify_upstream.py")
@@ -524,6 +540,13 @@ def main() -> int:
     lav.add_argument("--service-trust", required=True)
     lav.add_argument("--timeout", type=int, default=20)
     lav.set_defaults(func=cmd_lifecycle_anchor_verify)
+
+    ag = sub.add_parser("agent-gate", help="Launch an agent command only after fail-closed upstream preflight")
+    ag.add_argument("--domain", action="append", default=[], help="Applicable TSAR domain; repeat as needed")
+    ag.add_argument("--report", default=".tsar/preflight/agent-launch.json", help="Preflight report path")
+    ag.add_argument("--cwd", help="Working directory for preflight and child agent")
+    ag.add_argument("agent_command", nargs=argparse.REMAINDER, help="Child command after --")
+    ag.set_defaults(func=cmd_agent_gate)
 
     u = sub.add_parser("verify-upstream")
     u.add_argument("--domain", action="append", default=[],
