@@ -150,7 +150,7 @@ resource "aws_iam_role_policy" "lambda" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["s3:PutObject", "s3:GetObjectRetention"]
+        Action   = ["s3:PutObject", "s3:PutObjectRetention", "s3:GetObjectRetention"]
         Resource = "${aws_s3_bucket.anchors.arn}/runs/*"
       },
       {
