@@ -154,10 +154,30 @@ def _load_audit(audit_file: Path, root: Path) -> tuple[Path, dict, bytes]:
         raise LifecycleEvidenceError(f"cannot read lifecycle audit record: {exc}") from exc
     if not isinstance(record, dict) or record.get("schema") != "tsar/lifecycle-run/v1":
         raise LifecycleEvidenceError("unsupported lifecycle audit schema")
+    if not isinstance(record.get("task"), dict):
+        raise LifecycleEvidenceError("audit task plan must be an object")
+    task_plan = record["task"]
+    if not isinstance(task_plan.get("task"), str) or not task_plan["task"].strip():
+        raise LifecycleEvidenceError("audit task plan must contain a non-empty task description")
+    if task_plan.get("strict_required") is not True:
+        raise LifecycleEvidenceError("lifecycle audit must require strict enforcement")
+    required_gates = task_plan.get("required_gates")
+    if (not isinstance(required_gates, list) or not required_gates
+            or any(not isinstance(gate, str) or not gate.strip() for gate in required_gates)
+            or len(required_gates) != len(set(required_gates))):
+        raise LifecycleEvidenceError("task plan required_gates must be a unique list of non-empty strings")
+    if "upstream_preflight" not in required_gates:
+        raise LifecycleEvidenceError("task plan must require upstream_preflight")
     if not isinstance(record.get("gates"), dict) or not record["gates"]:
         raise LifecycleEvidenceError("audit gates must be a non-empty object")
-    if not any(gate != "upstream_preflight" for gate in record["gates"]):
-        raise LifecycleEvidenceError("audit must contain at least one lifecycle review gate")
+    if any(not isinstance(gate, str) or not gate.strip() for gate in record["gates"]):
+        raise LifecycleEvidenceError("audit gate names must be non-empty strings")
+    if set(record["gates"]) != set(required_gates):
+        missing = sorted(set(required_gates) - set(record["gates"]))
+        unexpected = sorted(set(record["gates"]) - set(required_gates))
+        raise LifecycleEvidenceError(
+            f"audit gate set does not match the signed task plan (missing={missing}, unexpected={unexpected})"
+        )
     if record["gates"].get("upstream_preflight") != "PASS":
         raise LifecycleEvidenceError("upstream_preflight must remain PASS")
     if any(state not in {"PENDING", "PASS", "FAIL"} for state in record["gates"].values()):

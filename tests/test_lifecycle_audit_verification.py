@@ -26,6 +26,11 @@ def make_run(tmp_path):
     audit = root / "run.json"
     audit.write_text(json.dumps({
         "schema": "tsar/lifecycle-run/v1",
+        "task": {
+            "task": "Review the TSAR lifecycle implementation",
+            "strict_required": True,
+            "required_gates": ["upstream_preflight", "core_policy_review"],
+        },
         "provenance": {"upstream_commit_sha": "a" * 40},
         "gates": {
             "upstream_preflight": "PASS",
@@ -167,7 +172,7 @@ def test_audit_context_tampering_invalidates_signed_attestation(tmp_path):
     root, audit, _, keyring, private_key = make_run(tmp_path)
     attest(root, audit, keyring, private_key)
     record = json.loads(audit.read_text(encoding="utf-8"))
-    record["task"] = {"description": "tampered after reviewer approval"}
+    record["task"]["task"] = "tampered after reviewer approval"
     audit.write_text(json.dumps(record), encoding="utf-8")
     result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["integrity_status"] == "FAIL"
@@ -180,6 +185,7 @@ def test_gate_set_tampering_invalidates_signed_attestation(tmp_path):
     attest(root, audit, keyring, private_key)
     record = json.loads(audit.read_text(encoding="utf-8"))
     record["gates"]["release_approval"] = "PENDING"
+    record["task"]["required_gates"].append("release_approval")
     audit.write_text(json.dumps(record), encoding="utf-8")
     result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["integrity_status"] == "FAIL"
@@ -207,5 +213,41 @@ def test_audit_without_review_gates_is_rejected(tmp_path):
     record = json.loads(audit.read_text(encoding="utf-8"))
     record["gates"] = {"upstream_preflight": "PASS"}
     audit.write_text(json.dumps(record), encoding="utf-8")
-    with pytest.raises(LifecycleEvidenceError, match="at least one lifecycle review gate"):
+    with pytest.raises(LifecycleEvidenceError, match="does not match the signed task plan"):
+        verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+
+
+def test_missing_required_gate_is_rejected_before_attestation(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["gates"].pop("core_policy_review")
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(LifecycleEvidenceError, match="does not match the signed task plan"):
+        verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+
+
+def test_unplanned_gate_is_rejected(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["gates"]["release_approval"] = "PENDING"
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(LifecycleEvidenceError, match="does not match the signed task plan"):
+        verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+
+
+def test_duplicate_required_gate_in_task_plan_is_rejected(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["task"]["required_gates"].append("core_policy_review")
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(LifecycleEvidenceError, match="unique list"):
+        verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+
+
+def test_non_strict_task_plan_is_rejected(tmp_path):
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    record = json.loads(audit.read_text(encoding="utf-8"))
+    record["task"]["strict_required"] = False
+    audit.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(LifecycleEvidenceError, match="strict enforcement"):
         verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
