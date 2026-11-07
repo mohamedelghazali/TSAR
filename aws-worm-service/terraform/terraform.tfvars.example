@@ -1,0 +1,5 @@
+aws_region        = "eu-west-3"
+bucket_name       = "REPLACE-WITH-GLOBALLY-UNIQUE-BUCKET-NAME"
+token_secret_arn  = "arn:aws:secretsmanager:eu-west-3:000000000000:secret:REPLACE"
+retention_days    = 365
+allowed_repositories = ["mohamedelghazali/TSAR"]
