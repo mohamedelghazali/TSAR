@@ -1,14 +1,21 @@
-"""Tests for lifecycle audit evidence integrity verification."""
-import hashlib
+"""Tests for cryptographically authenticated lifecycle audit verification."""
+import base64
 import json
 from pathlib import Path
 import sys
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "tsar-cli"))
-from lifecycle_evidence import LifecycleEvidenceError, attest_gate, verify_audit
+from lifecycle_evidence import (
+    LifecycleEvidenceError,
+    attest_gate,
+    build_attestation_payload,
+    verify_audit,
+)
 
 
 def make_run(tmp_path):
@@ -19,65 +26,129 @@ def make_run(tmp_path):
     audit = root / "run.json"
     audit.write_text(json.dumps({
         "schema": "tsar/lifecycle-run/v1",
-        "gates": {"upstream_preflight": "PASS", "core_policy_review": "PENDING"},
+        "provenance": {"upstream_commit_sha": "a" * 40},
+        "gates": {
+            "upstream_preflight": "PASS",
+            "core_policy_review": "PENDING",
+        },
         "evidence": [],
     }), encoding="utf-8")
-    return root, audit, evidence
+
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    keyring = tmp_path / "trusted-reviewers.json"
+    keyring.write_text(json.dumps({
+        "schema": "tsar/trusted-reviewers/v1",
+        "keys": [{
+            "key_id": "reviewer-01",
+            "actor": "security-reviewer",
+            "public_key": base64.b64encode(public_key).decode("ascii"),
+            "allowed_gates": ["core_policy_review"],
+            "active": True,
+        }],
+    }), encoding="utf-8")
+    keyring.chmod(0o600)
+    return root, audit, evidence, keyring, private_key
+
+
+def sign_attestation(root, audit, keyring, private_key):
+    payload = build_attestation_payload(
+        audit,
+        repo_root=root,
+        gate="core_policy_review",
+        evidence_file="evidence/review.txt",
+        key_id="reviewer-01",
+        keyring_file=keyring,
+    )
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    envelope = {
+        "schema": "tsar/reviewer-attestation/v1",
+        "key_id": "reviewer-01",
+        "payload": payload,
+        "signature": base64.b64encode(private_key.sign(canonical)).decode("ascii"),
+    }
+    attestation = root / "reviewer-attestation.json"
+    attestation.write_text(json.dumps(envelope), encoding="utf-8")
+    return attestation
+
+
+def attest(root, audit, keyring, private_key):
+    attestation = sign_attestation(root, audit, keyring, private_key)
+    return attest_gate(
+        audit,
+        repo_root=root,
+        gate="core_policy_review",
+        evidence_file="evidence/review.txt",
+        attestation_file=attestation,
+        trusted_reviewers_file=keyring,
+    )
 
 
 def test_verify_audit_passes_for_unchanged_evidence(tmp_path):
-    root, audit, evidence = make_run(tmp_path)
-    attest_gate(audit, repo_root=root, gate="core_policy_review",
-                evidence_file="evidence/review.txt", actor="reviewer")
-    result = verify_audit(audit, repo_root=root)
-    assert result["status"] == "PASS"
-    assert result["evidence_count"] == 1
+    root, audit, _, keyring, private_key = make_run(tmp_path)
+    result = attest(root, audit, keyring, private_key)
+
+    assert result["gates"]["core_policy_review"] == "PASS"
+    verified = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
+    assert verified["status"] == "PASS"
+    assert verified["evidence_count"] == 1
+    assert verified["findings"][0]["status"] == "PASS"
 
 
 def test_verify_audit_detects_modified_evidence(tmp_path):
-    root, audit, evidence = make_run(tmp_path)
-    attest_gate(audit, repo_root=root, gate="core_policy_review",
-                evidence_file="evidence/review.txt", actor="reviewer")
+    root, audit, evidence, keyring, private_key = make_run(tmp_path)
+    attest(root, audit, keyring, private_key)
     evidence.write_text("modified after review", encoding="utf-8")
-    result = verify_audit(audit, repo_root=root)
+
+    result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["status"] == "FAIL"
     assert result["findings"][0]["status"] == "HASH_MISMATCH"
 
 
 def test_verify_audit_detects_missing_evidence(tmp_path):
-    root, audit, evidence = make_run(tmp_path)
-    attest_gate(audit, repo_root=root, gate="core_policy_review",
-                evidence_file="evidence/review.txt", actor="reviewer")
+    root, audit, evidence, keyring, private_key = make_run(tmp_path)
+    attest(root, audit, keyring, private_key)
     evidence.unlink()
-    result = verify_audit(audit, repo_root=root)
+
+    result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["status"] == "FAIL"
     assert result["findings"][0]["status"] == "MISSING_OR_UNSAFE"
 
 
 def test_verify_audit_detects_gate_without_evidence(tmp_path):
-    root, audit, _ = make_run(tmp_path)
-    record = json.loads(audit.read_text())
+    root, audit, _, keyring, _ = make_run(tmp_path)
+    record = json.loads(audit.read_text(encoding="utf-8"))
     record["gates"]["core_policy_review"] = "PASS"
     audit.write_text(json.dumps(record), encoding="utf-8")
-    result = verify_audit(audit, repo_root=root)
+
+    result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["status"] == "FAIL"
-    assert any("no evidence" in item.get("reason", "") for item in result["findings"])
+    assert any(
+        "no evidence" in item.get("reason", "")
+        for item in result["findings"]
+    )
 
 
 def test_verify_audit_rejects_duplicate_gate_evidence(tmp_path):
-    root, audit, _ = make_run(tmp_path)
-    attest_gate(audit, repo_root=root, gate="core_policy_review",
-                evidence_file="evidence/review.txt", actor="reviewer")
-    record = json.loads(audit.read_text())
+    root, audit, _, keyring, private_key = make_run(tmp_path)
+    attest(root, audit, keyring, private_key)
+    record = json.loads(audit.read_text(encoding="utf-8"))
     record["evidence"].append(dict(record["evidence"][0]))
     audit.write_text(json.dumps(record), encoding="utf-8")
-    result = verify_audit(audit, repo_root=root)
+
+    result = verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
     assert result["status"] == "FAIL"
-    assert any(item.get("reason") == "duplicate evidence entry for gate" for item in result["findings"])
+    assert any(item["status"] == "INVALID" for item in result["findings"])
 
 
 def test_verify_audit_rejects_invalid_record(tmp_path):
-    root, audit, _ = make_run(tmp_path)
+    root, audit, _, keyring, _ = make_run(tmp_path)
     audit.write_text('{"schema":"wrong"}', encoding="utf-8")
-    with pytest.raises(LifecycleEvidenceError):
-        verify_audit(audit, repo_root=root)
+
+    with pytest.raises(LifecycleEvidenceError, match="unsupported lifecycle audit schema"):
+        verify_audit(audit, repo_root=root, trusted_reviewers_file=keyring)
