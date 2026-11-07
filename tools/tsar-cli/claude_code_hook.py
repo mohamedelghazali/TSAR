@@ -244,7 +244,12 @@ def _load_session_state(path: Path, *, session_id: str, repo_root: Path) -> dict
     return state
 
 
-def _safe_resource(repo_root: Path, tool_name: str, tool_input: Mapping[str, Any]) -> str:
+def _safe_resource(
+    repo_root: Path,
+    tool_name: str,
+    tool_input: Mapping[str, Any],
+    state: Mapping[str, Any],
+) -> str:
     _operation, _scope, _action, path_field = TOOL_SCOPES[tool_name]
     supplied = tool_input.get(path_field) if path_field else None
     if supplied is None:
@@ -258,8 +263,16 @@ def _safe_resource(repo_root: Path, tool_name: str, tool_input: Mapping[str, Any
         candidate = raw if raw.is_absolute() else repo_root / raw
     try:
         resolved = candidate.resolve(strict=False)
+    except OSError as exc:
+        raise ClaudeHookError("Tool path cannot be resolved safely") from exc
+    policy_files = state.get("required_policy_files", {})
+    if tool_name == "Read" and str(resolved) in policy_files:
+        return "tsar-policy:" + str(Path(str(resolved)).relative_to(
+            Path(state["repo_root"]).parent
+        ).as_posix())
+    try:
         relative = resolved.relative_to(repo_root)
-    except (OSError, ValueError) as exc:
+    except ValueError as exc:
         raise ClaudeHookError("Tool path escapes the trusted project root") from exc
     current = repo_root
     for part in relative.parts:
@@ -297,7 +310,8 @@ def _append_audit(path: Path, event: Mapping[str, Any]) -> None:
 
 
 def _request_for_tool(
-    repo_root: Path, payload: Mapping[str, Any], principal: str
+    repo_root: Path, payload: Mapping[str, Any], principal: str,
+    state: Mapping[str, Any],
 ) -> tuple[ActionRequest, ToolSpec]:
     tool_name = payload.get("tool_name")
     tool_input = payload.get("tool_input")
@@ -306,7 +320,7 @@ def _request_for_tool(
     if not isinstance(tool_input, dict):
         raise ClaudeHookError("Claude tool_input must be a JSON object")
     operation, scope, action_class, _path_field = TOOL_SCOPES[tool_name]
-    resource = _safe_resource(repo_root, tool_name, tool_input)
+    resource = _safe_resource(repo_root, tool_name, tool_input, state)
     spec = ToolSpec(
         name=tool_name,
         action_class=action_class,
