@@ -80,8 +80,10 @@ def _collect_evidence_files(record: dict, root: Path) -> tuple[dict[str, str], i
             raise LifecycleAnchorError("evidence changed after local lifecycle verification")
         encoded = base64.b64encode(data).decode("ascii")
         previous = collected.get(relative)
-        if previous is not None and previous != encoded:
-            raise LifecycleAnchorError("conflicting duplicate evidence paths")
+        if previous is not None:
+            if previous != encoded:
+                raise LifecycleAnchorError("conflicting duplicate evidence paths")
+            continue
         collected[relative] = encoded
         total += len(data)
     return collected, total
@@ -269,7 +271,7 @@ def anchor_audit(audit_file: Path, *, repo_root: Path, trusted_reviewers_file: P
     token = os.environ.get(token_env, "")
     if not token:
         raise LifecycleAnchorError(f"required bearer token environment variable is unset: {token_env}")
-    record_before, raw_before = _load_audit(Path(audit_file), root)
+    _, raw_before = _load_audit(Path(audit_file), root)
     try:
         audit_result = verify_audit(
             Path(audit_file), repo_root=root, trusted_reviewers_file=Path(trusted_reviewers_file)
