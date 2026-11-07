@@ -9,6 +9,21 @@ permissions:
   contents: read
 
 jobs:
+  agent-compatibility:
+    name: "Agent Compatibility Inventory"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Validate all 15 agent prompt integrations
+        run: python -m unittest discover -s tests -p test_agent_compatibility.py -v
+
   test:
     name: "TSAR Self-Test"
     runs-on: ubuntu-latest
@@ -41,7 +56,7 @@ jobs:
               names = set(wheel.namelist())
               required = {"lifecycle_anchor.py", "lifecycle_evidence.py", "reference_host.py", "claude_code_hook.py", "tsar.py"}
               missing = required - names
-              assert not missing, f"CLI wheel is missing required files: {sorted(missing)}"
+              assert not missing, f"wheel is missing required files: {sorted(missing)}"
               entry_point_files = [name for name in names if name.endswith(".dist-info/entry_points.txt")]
               assert len(entry_point_files) == 1, f"expected one entry_points.txt, found {entry_point_files}"
               entry_points = wheel.read(entry_point_files[0]).decode()
@@ -111,7 +126,7 @@ jobs:
           }
           if ($settings.hooks.PostToolUse[0].hooks[0].command -ne "python") { throw "PostToolUse hook command mismatch" }
           if ($settings.hooks.PostToolUseFailure[0].hooks[0].command -ne "python") { throw "PostToolUseFailure hook command mismatch" }
-          Write-Host "Claude Code hook settings are valid for Windows exec-form invocation."
+          Write-Host "Windows hook settings are valid for exec-form invocation."
 
       - name: Verify Windows stdin, stdout, exit-code, and deny behavior
         shell: pwsh
@@ -135,4 +150,3 @@ jobs:
 
       - name: Run Claude Code adapter tests on Windows
         run: python -m pytest -q tests/test_claude_code_hook.py tests/test_tool_boundary.py
-
