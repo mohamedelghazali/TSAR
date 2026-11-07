@@ -28,8 +28,8 @@ The historical inventory and CI evidence are retained as release records, not as
 ## Current Main Snapshot — 2026-11-07
 
 - Branch: `main`
-- Commit: `8a3b66c8c85278fac2a7e818715d8dfe950540f5`
-- Commit subject: `feat(aws): export deployed trust material from GitHub workflow (#75)`
+- Commit: `fb666df0cb4609624a287ccd59006b50051c6b55`
+- Commit subject: `chore(web): align Next.js 16 and React 19 dependencies (#92)`
 - Version files are aligned at `1.2.0` (`VERSION`, `manifest.yaml`, CLI, LSP, and web package metadata). This is candidate metadata; no v1.2.0 tag or release has been published.
 - The `v1.1.1` tag does not point to this commit. The current main snapshot is therefore not represented by the published v1.1.1 tag or its historical release qualification.
 
@@ -37,10 +37,10 @@ The historical inventory and CI evidence are retained as release records, not as
 
 The post-merge workflows for the current main commit completed successfully:
 
-- The current commit's release-gates workflow completed successfully.
-- The full verification job reported **269 pytest tests passed** and `ALL CHECKS PASSED`.
-- The post-merge check-run set was reported as **7/7 successful**.
-- Terraform static validation, infrastructure validation, Kubernetes schema validation, TSAR validation, self-test, and orchestrator checks completed successfully.
+- The current commit's release-gates workflow completed successfully: [run 42410222144](https://github.com/mohamedelghazali/TSAR/actions/runs/42410222144).
+- The full verification job reported **326 pytest tests passed** and `ALL CHECKS PASSED`.
+- The post-merge check-run set contains **8/8 successful checks**.
+- Terraform static validation, infrastructure validation, Kubernetes schema validation, TSAR validation, self-test, Claude Code Windows Hook Compatibility, and orchestrator checks completed successfully.
 
 This is evidence of repository-level validation for this commit. It is not evidence of a live AWS deployment or an independently audited production environment.
 
@@ -55,7 +55,7 @@ The active ruleset `TSAR-Main-Protection` targets `refs/heads/main` and currentl
 - Required linear history.
 - Zero required approving reviews.
 
-The ruleset now contains a `required_status_checks` rule with strict policy enabled, but its `required_status_checks` list is **empty**. Consequently, no individual CI check is actually required for merging yet. A repository administrator must populate that list with the exact observed check names (Full verification, Terraform Static Validation, Infrastructure Validation, Kubernetes Schema Validation, TSAR Validate Rules, TSAR Self-Test, and TSAR Orchestrator).
+The ruleset contains a `required_status_checks` rule with strict policy enabled, but its `required_status_checks` list is **empty**. Consequently, no individual CI check is actually required for merging yet. A repository administrator must populate that list with the exact observed check names: `Full verification (OPA, LSP, Terraform, pytest)`, `TSAR Self-Test`, `Claude Code Windows Hook Compatibility`, `Infrastructure Validation`, `TSAR Validate Rules`, and `TSAR Orchestrator`. The Terraform and Kubernetes child jobs are currently aggregated by the `Infrastructure Validation` job.
 
 A second qualified maintainer's approval is recommended when one is available. No approval requirement is represented as active today.
 
@@ -95,7 +95,7 @@ A separate Staging environment is **not a required project milestone** for TSAR.
 | Scope | Decision |
 |---|---|
 | Historical v1.1.1 release | Qualified only for its recorded tag and commit |
-| Current main repository CI | Pass on `8a3b66c8c85278fac2a7e818715d8dfe950540f5` (7/7; 269 tests) |
+| Current main repository CI | Pass on `fb666df0cb4609624a287ccd59006b50051c6b55` (8/8; 326 tests) |
 | Current main as a new published release | Not qualified as a new release; no new version/tag has been created |
 | 1.2.0 candidate | GitHub-only qualification path; no tag/release created yet |
 | AWS WORM operational behavior | Out of scope for core release; not verified and not operational |
