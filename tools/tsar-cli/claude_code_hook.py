@@ -35,8 +35,8 @@ DEFAULT_DOMAINS = ("development", "agentic_ai", "ai_security", "secrets")
 POLICY_STATE_TTL_SECONDS = 6 * 60 * 60
 TOOL_SCOPES = {
     "Read": ("read", "repo:read", ActionClass.READ_ONLY, "file_path"),
-    "Glob": ("read", "repo:read", ActionClass.READ_ONLY, None),
-    "Grep": ("read", "repo:read", ActionClass.READ_ONLY, None),
+    "Glob": ("read", "repo:read", ActionClass.READ_ONLY, "path"),
+    "Grep": ("read", "repo:read", ActionClass.READ_ONLY, "path"),
     "LS": ("read", "repo:read", ActionClass.READ_ONLY, "path"),
     "Write": ("write", "repo:write", ActionClass.REPOSITORY_WRITE, "file_path"),
     "Edit": ("write", "repo:write", ActionClass.REPOSITORY_WRITE, "file_path"),
@@ -267,7 +267,7 @@ def _safe_resource(
         resolved = candidate.resolve(strict=False)
     except OSError as exc:
         raise ClaudeHookError("Tool path cannot be resolved safely") from exc
-    policy_files = state.get("required_policy_files", {})
+    if tool_name == "Glob":\n        pattern = tool_input.get("pattern")\n        if not isinstance(pattern, str) or any(part == ".." for part in pattern.replace("\\\\", "/").split("/")):\n            raise ClaudeHookError("Glob pattern must not traverse outside the project root")\n    policy_files = state.get("required_policy_files", {})
     if tool_name == "Read" and str(resolved) in policy_files:
         return "tsar-policy:" + Path(str(resolved)).relative_to(
             Path(state["policy_cache_root"])
