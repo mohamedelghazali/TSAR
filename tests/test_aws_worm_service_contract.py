@@ -16,6 +16,9 @@ def test_lambda_service_uses_compliance_lock_and_ed25519_kms_signing():
     assert "audit_snapshot_b64" in source
     assert "digest(audit_bytes) != record_sha" in source
     assert "stable_identity" in source
+    assert "evidence_files_b64" in source
+    assert "evidence archive bytes do not match audit evidence metadata" in source
+    assert "s3:PutObjectRetention" in (SERVICE / "terraform" / "main.tf").read_text(encoding="utf-8")
 
 
 def test_terraform_enables_object_lock_versioning_and_deletion_protection():
