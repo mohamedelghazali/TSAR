@@ -5,11 +5,11 @@ and Terraform for a deployment that has not been provisioned by this repository.
 
 ## Architecture
 
-- API Gateway HTTP API exposes the two endpoints used by \`tools/tsar-cli/lifecycle_anchor.py\`.
+- API Gateway HTTP API exposes the two endpoints used by `tools/tsar-cli/lifecycle_anchor.py`.
 - Lambda validates the bearer token from AWS Secrets Manager, request shape, repository allowlist, run identity, audit snapshot bytes/digest, idempotency key, and expected previous receipt digest.
-- DynamoDB stores run state, append records, and idempotency records. A single \`TransactWriteItems\` operation commits the anchor, idempotency record, and sequence/state transition atomically.
+- DynamoDB stores run state, append records, and idempotency records. A single `TransactWriteItems` operation commits the anchor, idempotency record, and sequence/state transition atomically.
 - S3 Object Lock stores the complete Base64-carried audit snapshot, referenced evidence files, request, and signed receipt in a versioned bucket with explicit COMPLIANCE retention. The service checks the supplied bytes against `record_sha256` and recomputes the stable run ID before archiving. The service checks the retention mode and expiry returned by S3 before committing the DynamoDB index.
-- AWS KMS uses an asymmetric Ed25519 key (\`ECC_NIST_EDWARDS25519\`) to sign the canonical receipt. The private key is never exported.
+- AWS KMS uses an asymmetric Ed25519 key (`ECC_NIST_EDWARDS25519`) to sign the canonical receipt. The private key is never exported.
 
 ## Consistency and failure behavior
 
@@ -19,9 +19,9 @@ The idempotency record is committed in the same DynamoDB transaction as the anch
 
 ## Prerequisites
 
-- An AWS account and deployment identity with permission to create the resources in \`terraform/main.tf\`.
+- An AWS account and deployment identity with permission to create the resources in `terraform/main.tf`.
 - Terraform 1.6 or later and the AWS provider 6.x.
-- A pre-created Secrets Manager secret whose \`SecretString\` is the bearer token. Do not put the token in Terraform variables, state, shell history, source control, or command-line arguments.
+- A pre-created Secrets Manager secret whose `SecretString` is the bearer token. Do not put the token in Terraform variables, state, shell history, source control, or command-line arguments.
 - A globally unique S3 bucket name.
 - An explicit retention decision. The example defaults to 365 days. S3 COMPLIANCE retention cannot be shortened or bypassed for retained object versions, including by the account root user.
 
@@ -30,13 +30,13 @@ The idempotency record is committed in the same DynamoDB transaction as the anch
 From this directory:
 
 1. Create a random bearer token and store it in Secrets Manager. Record only the secret ARN.
-2. Review and set \`aws_region\`, \`bucket_name\`, \`token_secret_arn\`, \`retention_days\`, and \`allowed_repositories\` in a private tfvars file. Never commit that file.
-3. Run \`terraform init\`, \`terraform fmt -check\`, \`terraform validate\`, and \`terraform plan\`. Review the plan carefully before any apply.
-4. Only after explicit operational approval, run \`terraform apply\`.
-5. Retrieve the KMS public key using \`GetPublicKey\`. Confirm its key spec is \`ECC_NIST_EDWARDS25519\`, serialize the raw 32-byte Ed25519 public key, and place its Base64 value in an external \`tsar/audit-anchor-trust/v1\` trust file. Distribute and pin that trust file through an independent administrative channel.
-6. Set \`TSAR_AUDIT_ANCHOR_TOKEN\` in the TSAR runtime environment and use the API endpoint output with \`tsar lifecycle-anchor\`.
+2. Review and set `aws_region`, `bucket_name`, `token_secret_arn`, `retention_days`, and `allowed_repositories` in a private tfvars file. Never commit that file.
+3. Run `terraform init`, `terraform fmt -check`, `terraform validate`, and `terraform plan`. Review the plan carefully before any apply.
+4. Only after explicit operational approval, run `terraform apply`.
+5. Run `python tools/export_service_trust.py --key-id <KMS_KEY_ARN> --service-id <SERVICE_ID> --region <AWS_REGION> --output <SECURE_PATH>/anchor-service.json` from this directory. The helper checks the KMS key type, exports the raw 32-byte Ed25519 public key, and creates a mode-0600 trust file outside the repository without overwriting an existing file. Verify the printed fingerprint through an independent administrative channel before distributing the trust file.
+6. Set `TSAR_AUDIT_ANCHOR_TOKEN` in the TSAR runtime environment and use the API endpoint output with `tsar lifecycle-anchor`.
 
-The KMS \`Sign\` call uses \`ED25519_SHA_512\` with \`MessageType=RAW\`, matching the standard Ed25519 signature verified by the TSAR client. Do not switch to the pre-hash variant without changing and testing the client protocol.
+The KMS `Sign` call uses `ED25519_SHA_512` with `MessageType=RAW`, matching the standard Ed25519 signature verified by the TSAR client. Do not switch to the pre-hash variant without changing and testing the client protocol.
 
 ## Security boundaries and remaining production work
 
@@ -52,7 +52,7 @@ The KMS \`Sign\` call uses \`ED25519_SHA_512\` with \`MessageType=RAW\`, matchin
 
 ## API compatibility
 
-- \`GET /v1/runs/{run_id}/latest\`: HTTP 200 with \`{"receipt": ...}\`, or HTTP 404 when no accepted anchor exists.
-- \`POST /v1/anchors\`: HTTP 201 with \`{"receipt": ...}\` after S3 retention verification and DynamoDB transaction commit.
-- Receipts use \`tsar/external-audit-anchor-receipt/v1\`; the Ed25519 signature covers every field except \`signature\`.
+- `GET /v1/runs/{run_id}/latest`: HTTP 200 with `{"receipt": ...}`, or HTTP 404 when no accepted anchor exists.
+- `POST /v1/anchors`: HTTP 201 with `{"receipt": ...}` after S3 retention verification and DynamoDB transaction commit.
+- Receipts use `tsar/external-audit-anchor-receipt/v1`; the Ed25519 signature covers every field except `signature`.
 - The service returns HTTP 409 for stale sequence/concurrent append conflicts. The client should fetch the latest receipt and retry.
