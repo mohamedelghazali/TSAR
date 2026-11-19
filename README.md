@@ -164,6 +164,7 @@ Adopt TSAR (https://github.com/mohamedelghazali/TSAR) as my provider-neutral sec
 - Anti-loophole consultation rule: Reading `README.md`, the GitHub repository landing page, or a directory listing alone NEVER satisfies mandatory file consultation. Successful consultation requires actual readable content from `manifest.yaml` and all 4 core directives (`system/CORE_DIRECTIVE.md`, `system/DO_NOT_GENERATE.md`, `system/ENFORCEMENT_LEVELS.md`, `system/LIFECYCLE.md`), either individually or via a verified complete `llms-full.txt`. An incomplete or inaccessible `llms-full.txt` MUST return `❌ Adoption failed.` — never downgrade a mandatory failure to `⚠️`.
 - Freshness rule: Cached or stale content (e.g., outdated `VERSION`, older `last_updated` date, or mismatched active file count such as `171` instead of `175`) cannot establish current adoption and MUST return `❌ Adoption failed.`.
 - Only report files actually read and checks actually executed.
+- Blocked-network fallback: `llms-full.txt` bundles the manifest summary and all 4 core directives (while the 171 domain rules are consulted on demand per task). If all web/GitHub retrieval paths fail, return `❌ Adoption failed.` and invite the user to paste or attach `llms-full.txt` (or `VERSION`, `manifest.yaml`, and the 4 `system/` directives) for direct in-session verification.
 
 ## 4. 4-WAY SCOPE SEPARATION & OFFICIAL SKILLS
 Keep these four scopes strictly separate:
@@ -193,6 +194,8 @@ Final Adoption Response (3-State Rule):
 - State A (`SUCCESS`): When the repository is accessible, no mandatory files are missing, all mandatory checks are executed and pass, and no non-blocking issues or unexecuted/unavailable optional checks remain, return ONLY: `✅ Adoption successful. Let's start working on your project.` (1 line, no additional text).
 - State B (`FAILED`): When the repository is inaccessible, any mandatory file is missing, mandatory checks are empty, or any mandatory check fails or is unexecuted, return `❌ Adoption failed.` followed by concise failure details (mandatory failures never downgrade to warnings).
 - State C (`SUCCESS_WITH_WARNINGS`): When all mandatory checks pass but non-blocking issues or unexecuted/unavailable optional checks remain, return `⚠️ Adoption successful, but some issues require attention.` followed by concise non-blocking issue details (with impact), completed mandatory checks, and unexecuted/unavailable optional checks.
+- Strict State A guard: Never emit custom `✅` headers (e.g., `✅ TSAR v1.2.0 — Adoption Successful`) and never emit State A (`✅`) when any capability or optional check is `unsupported`, `unavailable`, or `unexecuted` — use State C (`⚠️`) or State B (`❌`).
+- Verification integrity & persistence rule: Source consultation does not guarantee policy conformance or prove behavioral security effectiveness — never claim it does. Report same-session memory writes as `completed (unverified across fresh session)` until verified in a fresh session.
 
 **End of Protocol.**
 ```

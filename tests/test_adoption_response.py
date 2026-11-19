@@ -23,6 +23,7 @@ MandatoryCheck = adoption_response.MandatoryCheck
 NonBlockingIssue = adoption_response.NonBlockingIssue
 OptionalCheck = adoption_response.OptionalCheck
 classify_and_format_adoption = adoption_response.classify_and_format_adoption
+validate_adoption_response_text = adoption_response.validate_adoption_response_text
 
 
 class TestAdoptionResponse(unittest.TestCase):
@@ -204,6 +205,88 @@ class TestAdoptionResponse(unittest.TestCase):
         result = classify_and_format_adoption(evaluation)
         self.assertEqual(result.outcome, AdoptionOutcome.FAILED)
         self.assertTrue(result.message.startswith("❌ Adoption failed."))
+
+    def test_11_validate_canonical_state_a_exact_single_line_passes(self) -> None:
+        result = validate_adoption_response_text(
+            "✅ Adoption successful. Let's start working on your project."
+        )
+        self.assertTrue(result.valid)
+        self.assertEqual(result.detected_outcome, AdoptionOutcome.SUCCESS)
+        self.assertEqual(result.violations, ())
+
+    def test_12_validate_dola_false_positive_state_a_rejected(self) -> None:
+        text = (
+            "✅ TSAR v1.2.0 — Adoption Successful ✅\n"
+            "- Hook installation: unsupported\n"
+            "- Cross-session persistence: unavailable"
+        )
+        result = validate_adoption_response_text(text)
+        self.assertFalse(result.valid)
+        self.assertIsNone(result.detected_outcome)
+        self.assertTrue(any("canonical header" in v for v in result.violations))
+        self.assertTrue(any("false positive" in v for v in result.violations))
+
+    def test_13_validate_state_a_with_extra_commentary_rejected(self) -> None:
+        text = (
+            "✅ Adoption successful. Let's start working on your project.\n"
+            "All 4 directives loaded."
+        )
+        result = validate_adoption_response_text(text)
+        self.assertFalse(result.valid)
+        self.assertEqual(result.detected_outcome, AdoptionOutcome.SUCCESS)
+        self.assertTrue(any("strictly one line" in v for v in result.violations))
+
+    def test_14_validate_qwen_consultation_guarantees_conformance_overclaim_rejected(self) -> None:
+        text = (
+            "✅ Adoption successful. Let's start working on your project.\n"
+            "Note: direct file consultation guarantees policy conformance."
+        )
+        result = validate_adoption_response_text(text)
+        self.assertFalse(result.valid)
+        self.assertTrue(any("Verification integrity violation" in v for v in result.violations))
+
+    def test_15_validate_canonical_state_b_fail_closed_refusal_passes(self) -> None:
+        text = (
+            "❌ Adoption failed.\n"
+            "- Repository inaccessible: network retrieval blocked."
+        )
+        result = validate_adoption_response_text(text)
+        self.assertTrue(result.valid)
+        self.assertEqual(result.detected_outcome, AdoptionOutcome.FAILED)
+        self.assertEqual(result.violations, ())
+
+    def test_16_validate_canonical_state_c_warning_response_passes(self) -> None:
+        text = (
+            "⚠️ Adoption successful, but some issues require attention.\n"
+            "- Optional check unavailable: telemetry-hook"
+        )
+        result = validate_adoption_response_text(text)
+        self.assertTrue(result.valid)
+        self.assertEqual(result.detected_outcome, AdoptionOutcome.SUCCESS_WITH_WARNINGS)
+        self.assertEqual(result.violations, ())
+
+    def test_17_validate_preamble_before_header_rejected(self) -> None:
+        text = (
+            "Here is the adoption result:\n"
+            "✅ Adoption successful. Let's start working on your project."
+        )
+        result = validate_adoption_response_text(text)
+        self.assertFalse(result.valid)
+        self.assertIsNone(result.detected_outcome)
+        self.assertTrue(any("canonical header" in v for v in result.violations))
+
+    def test_18_validate_bare_state_b_or_state_c_without_details_rejected(self) -> None:
+        for header, expected_outcome in (
+            ("❌ Adoption failed.", AdoptionOutcome.FAILED),
+            (
+                "⚠️ Adoption successful, but some issues require attention.",
+                AdoptionOutcome.SUCCESS_WITH_WARNINGS,
+            ),
+        ):
+            result = validate_adoption_response_text(header)
+            self.assertFalse(result.valid)
+            self.assertEqual(result.detected_outcome, expected_outcome)
+            self.assertTrue(result.violations)
 
 
 if __name__ == "__main__":
