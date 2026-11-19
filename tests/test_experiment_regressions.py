@@ -489,6 +489,28 @@ class ExperimentRegressionTests(unittest.TestCase):
             self.assertIn("v1.2.1", doc)
             self.assertNotIn("NOT yet release-qualified", doc)
 
+    def test_21_web_only_claude_without_version_or_agents_returns_state_c(self) -> None:
+        files = {"manifest.yaml": True, "system/CORE_DIRECTIVE.md": True, "system/DO_NOT_GENERATE.md": True, "system/ENFORCEMENT_LEVELS.md": True, "system/LIFECYCLE.md": True}
+        res = evaluate_adoption_run(AdoptionRunInput(repository_accessible=True, capabilities=RuntimeCapabilities(has_local_checkout=False, has_python_runtime=False), verified_files=files))
+        self.assertEqual(res.outcome, AdoptionOutcome.SUCCESS_WITH_WARNINGS)
+        self.assertIn("supplementary_file:VERSION", res.message)
+        self.assertIn("supplementary_file:AGENTS.md", res.message)
+
+    def test_22_local_checkout_missing_version_or_agents_still_fails_closed(self) -> None:
+        for missing_file in ("VERSION", "AGENTS.md"):
+            files = dict(ALL_CORE_FILES)
+            files[missing_file] = False
+            res = evaluate_adoption_run(AdoptionRunInput(repository_accessible=True, capabilities=RuntimeCapabilities(has_local_checkout=True, has_python_runtime=True), verified_files=files, runner_executed=True, runner_passed=True, consultation_verifier_executed=True, consultation_verifier_passed=True))
+            self.assertEqual(res.outcome, AdoptionOutcome.FAILED, msg=missing_file)
+            self.assertIn(f"Missing core file: {missing_file}", res.message)
+
+    def test_23_latest_four_model_run_integration(self) -> None:
+        base_ok = {"VERSION": True, "manifest.yaml": True, "system/CORE_DIRECTIVE.md": True, "system/DO_NOT_GENERATE.md": True, "system/ENFORCEMENT_LEVELS.md": True, "system/LIFECYCLE.md": True}
+        claude_ok = {"manifest.yaml": True, "system/CORE_DIRECTIVE.md": True, "system/DO_NOT_GENERATE.md": True, "system/ENFORCEMENT_LEVELS.md": True, "system/LIFECYCLE.md": True}
+        for name, inp, expected in (("DeepSeek", AdoptionRunInput(verified_files=base_ok), AdoptionOutcome.SUCCESS_WITH_WARNINGS), ("ChatGPT", AdoptionRunInput(capabilities=RuntimeCapabilities(has_local_checkout=False, has_python_runtime=True), verified_files=base_ok), AdoptionOutcome.SUCCESS_WITH_WARNINGS), ("Claude", AdoptionRunInput(verified_files=claude_ok), AdoptionOutcome.SUCCESS_WITH_WARNINGS), ("Copilot", AdoptionRunInput(capabilities=RuntimeCapabilities(has_local_checkout=False, has_python_runtime=True), verified_files={}), AdoptionOutcome.FAILED)):
+            res = evaluate_adoption_run(inp)
+            self.assertEqual(res.outcome, expected, msg=name)
+
 
 if __name__ == "__main__":
     unittest.main()

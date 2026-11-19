@@ -230,36 +230,23 @@ def evaluate_adoption_run(run_input: AdoptionRunInput) -> AdoptionResponse:
     )
     fallback_warning_added = False
 
-    for rel_path in ("VERSION", "manifest.yaml", "AGENTS.md"):
+    manifest_present = bool(run_input.verified_files.get("manifest.yaml", False))
+    manifest_via_llms = (not manifest_present) and llms_fallback_valid and run_input.llms_full_verified_manifest
+    if manifest_via_llms and not fallback_warning_added:
+        non_blocking_issues.append(NonBlockingIssue(summary="Direct file retrieval blocked; verified mandatory governance content via complete llms-full.txt fallback."))
+        fallback_warning_added = True
+    manifest_ok = manifest_present or manifest_via_llms
+    mandatory_checks.append(MandatoryCheck(name="core_file:manifest.yaml", passed=manifest_ok, details="" if manifest_ok else "Missing core file: manifest.yaml"))
+            
+    for rel_path in ("VERSION", "AGENTS.md"):
         present = bool(run_input.verified_files.get(rel_path, False))
-        if (
-            rel_path == "manifest.yaml"
-            and not present
-            and llms_fallback_valid
-            and run_input.llms_full_verified_manifest
-        ):
-            mandatory_checks.append(
-                MandatoryCheck(name="core_file:manifest.yaml", passed=True)
-            )
-            if not fallback_warning_added:
-                non_blocking_issues.append(
-                    NonBlockingIssue(
-                        summary=(
-                            "Direct file retrieval blocked; verified mandatory "
-                            "governance content via complete llms-full.txt fallback."
-                        )
-                    )
-                )
-                fallback_warning_added = True
+        if present:
+            mandatory_checks.append(MandatoryCheck(name=f"core_file:{rel_path}", passed=True))
+        elif run_input.capabilities.has_local_checkout:
+           mandatory_checks.append(MandatoryCheck(name=f"core_file:{rel_path}", passed=False, details=f"Missing core file: {rel_path}"))
         else:
-            mandatory_checks.append(
-                MandatoryCheck(
-                    name=f"core_file:{rel_path}",
-                    passed=present,
-                    details="" if present else f"Missing core file: {rel_path}",
-                )
-            )
-
+            optional_checks.append(OptionalCheck(name=f"supplementary_file:{rel_path}", available=True, executed=False, passed=False, details=f"{rel_path} not fetched separately in web-only runtime (version and governance metadata supplied by manifest.yaml)."))
+            
     directives_present = all(
         bool(run_input.verified_files.get(path, False))
         for path in SYSTEM_DIRECTIVES
